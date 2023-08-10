@@ -221,14 +221,15 @@ public class MapControlModule: RCTEventEmitter {
     }
     
     @objc public func setMapPadding(_ left: Int, top: Int, right: Int, bottom: Int,
-                                    resolver resolve: RCTPromiseResolveBlock,
-                                    rejecter reject: RCTPromiseRejectBlock) {
+                                    resolver resolve: @escaping RCTPromiseResolveBlock,
+                                    rejecter reject: @escaping RCTPromiseRejectBlock) {
         
         let edgeInsets = UIEdgeInsets(top: CGFloat(top), left: CGFloat(left), bottom: CGFloat(bottom), right: CGFloat(right))
         
-        MapsIndoorsData.sharedInstance.mapControl?.mapPadding = edgeInsets
-        
-        return resolve(nil)
+        DispatchQueue.main.async {
+            MapsIndoorsData.sharedInstance.mapControl?.mapPadding = edgeInsets
+            return resolve(nil)
+        }
     }
     
     @objc public func getMapViewPaddingStart(_ resolve: RCTPromiseResolveBlock,
@@ -338,18 +339,20 @@ public class MapControlModule: RCTEventEmitter {
     }
     
     @objc public func animateCamera(_ updateJSON: String,
-                                    duration: Int, //TODO: confirm if Int is fine here (any useful distinction between 0 and nil here?) //_duration: NSNumber, // TODO: check if NSNumber matches java @Nullable
+                                    duration: Int,
                                     resolver resolve: RCTPromiseResolveBlock,
                                     rejecter reject: RCTPromiseRejectBlock) {
         guard let mapView = MapsIndoorsData.sharedInstance.mapView else {
             return doReject(reject, message: "Google maps not available")
         }
         
-        // /*if*/ let duration = _duration.intValue // Only used if using _duration: NSNumber to match @Nullable in Java
         do {
             let cameraUpdate: CameraUpdate = try fromJSON(updateJSON)
-            
-            try mapView.animateCamera(cameraUpdate: cameraUpdate, duration: duration)
+            if (duration == -1) {
+                try mapView.moveCamera(cameraUpdate: cameraUpdate)
+            }else {
+                try mapView.animateCamera(cameraUpdate: cameraUpdate, duration: duration)
+            }
 
             return resolve(nil)
         } catch let e /*as CameraUpdateError*/ {
@@ -460,8 +463,8 @@ public class MapControlModule: RCTEventEmitter {
     }
 
     @objc public func setMPCameraEventListener(_ setup: Bool, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        
-        return doReject(reject, message: "NOT IMPLEMENTED")
+        MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.respondToCameraEvents = setup
+        return resolve(nil)
     }
 
     // Floor selector

@@ -28,13 +28,11 @@
       resolver:(RCTPromiseResolveBlock) resolve
       rejecter:(RCTPromiseRejectBlock) reject)
 
-    RCT_EXTERN_METHOD(setAnimatedPolyline: (BOOL) animated
-      repeated:(BOOL): repeated
-      duration :(nonnull NSNumber *) duration
+    RCT_EXTERN_METHOD(setCameraViewFitMode: (nonnull NSNumber *) cameraFitMode
       resolver:(RCTPromiseResolveBlock) resolve
       rejecter:(RCTPromiseRejectBlock) reject)
 
-    RCT_EXTERN_METHOD(setCameraViewFitMode: (nonnull NSNumber *) cameraFitMode
+    RCT_EXTERN_METHOD(setCameraAnimationDuration: (nonnull NSNumber *) duration
       resolver:(RCTPromiseResolveBlock) resolve
       rejecter:(RCTPromiseRejectBlock) reject)
 
@@ -47,6 +45,12 @@
       rejecter:(RCTPromiseRejectBlock) reject)
 
     RCT_EXTERN_METHOD(setRoute: (NSString *) routeString
+      resolver:(RCTPromiseResolveBlock) resolve
+      rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(setAnimatedPolyline: (BOOL) animated
+      repeated:(BOOL) repeated
+      duration:(nonnull NSNumber *) duration
       resolver:(RCTPromiseResolveBlock) resolve
       rejecter:(RCTPromiseRejectBlock) reject)
 

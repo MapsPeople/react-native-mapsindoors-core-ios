@@ -56,12 +56,13 @@ class MapControlDelegate: MPMapControlDelegate, LiveDataDelegate, MPFloorSelecto
     var consumeChangeLocation: Bool = false
 
     var respondToDidTapInfoWindow: Bool = false
-
-    // TODO: camera event not implemented on iOS v4
+    
+    var respondToCameraEvents: Bool = false
 
     init(eventEmitter: RCTEventEmitter) {
         self.eventEmitter = eventEmitter
     }
+    
 
     private func sendEvent(event: MapsIndoorsData.Event, body: [String: Any?]) {
         eventEmitter.sendEvent(withName: event.rawValue, body: body)
@@ -69,6 +70,20 @@ class MapControlDelegate: MPMapControlDelegate, LiveDataDelegate, MPFloorSelecto
 
     // MPMapControlDelegate:
 
+    func cameraIdle() -> Bool {
+        if (respondToCameraEvents) {
+            sendEvent(event: .cameraEvent, body: ["event": 7])
+        }
+        return true;
+    }
+    
+    func cameraWillMove() -> Bool {
+        if (respondToCameraEvents) {
+            sendEvent(event: .cameraEvent, body: ["event": 5])
+        }
+        return true;
+    }
+    
     func didTap(coordinate: MPPoint) -> Bool {
         if (respondToTap) {
             sendEvent(event: .onMapClick, body: ["point": toJSON(coordinate)])
