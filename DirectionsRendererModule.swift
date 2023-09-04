@@ -13,6 +13,7 @@ import React
 public class DirectionsRendererModule: RCTEventEmitter {
     private var directionsRenderer: MPDirectionsRenderer? = nil
     private var isListeningForLegChanges: Bool = false
+    private var animationDuration: NSNumber = 5
 
     @objc public override static func requiresMainQueueSetup() -> Bool { return false }
 
@@ -26,6 +27,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
     @objc public func clear(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         if (directionsRenderer == nil) {
             directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+            animationDuration = 5
         }
 
         guard let directionsRenderer else {
@@ -71,7 +73,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
             let succes = directionsRenderer.nextLeg()
 
             if succes {
-                directionsRenderer.animate(duration: 5)
+                directionsRenderer.animate(duration: animationDuration.doubleValue)
                 if (isListeningForLegChanges) {
                     sendEvent(withName: MapsIndoorsData.Event.onLegSelected.rawValue, body: ["leg": directionsRenderer.routeLegIndex])
                 }
@@ -95,7 +97,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
             let succes = directionsRenderer.previousLeg()
 
             if succes {
-                directionsRenderer.animate(duration: 5)
+                directionsRenderer.animate(duration: animationDuration.doubleValue)
                 if (isListeningForLegChanges) {
                     sendEvent(withName: MapsIndoorsData.Event.onLegSelected.rawValue, body: ["leg": directionsRenderer.routeLegIndex])
                 }
@@ -131,7 +133,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
         DispatchQueue.main.sync {
             directionsRenderer.routeLegIndex = legIndex.intValue
 
-            directionsRenderer.animate(duration: 5)
+            directionsRenderer.animate(duration: animationDuration.doubleValue)
 
             if isListeningForLegChanges {
                 sendEvent(withName: MapsIndoorsData.Event.onLegSelected.rawValue, body: ["leg": directionsRenderer.routeLegIndex])
@@ -150,9 +152,9 @@ public class DirectionsRendererModule: RCTEventEmitter {
         }
 
         if (animated) {
-            DispatchQueue.main.sync {
-                directionsRenderer.animate(duration: duration.doubleValue)
-            }
+            animationDuration = duration
+        }else {
+            animationDuration = 0
         }
 
         return resolve(nil)
@@ -167,9 +169,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
             return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
         }
         
-        DispatchQueue.main.async {
-            directionsRenderer.animate(duration: duration.doubleValue)
-        }
+        animationDuration = duration
         
         return resolve(nil)
     }
@@ -229,7 +229,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
         DispatchQueue.main.sync {
             directionsRenderer.route = route
             directionsRenderer.routeLegIndex = 0
-            directionsRenderer.animate(duration: 5)
+            directionsRenderer.animate(duration: animationDuration.doubleValue)
         }
 
         resolve(nil)
