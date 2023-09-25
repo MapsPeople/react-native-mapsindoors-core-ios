@@ -54,4 +54,8 @@
       resolver:(RCTPromiseResolveBlock) resolve
       rejecter:(RCTPromiseRejectBlock) reject)
 
+      RCT_EXTERN_METHOD(showRouteLegButtons: (BOOL) value
+      resolver:(RCTPromiseResolveBlock) resolve
+      rejecter:(RCTPromiseRejectBlock) reject)
+
 @end

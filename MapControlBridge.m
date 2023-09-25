@@ -138,6 +138,12 @@
                       resolver:(RCTPromiseResolveBlock) resolve
                       rejecter:(RCTPromiseRejectBlock) reject)
 
+    RCT_EXTERN_METHOD(setLabelOptions:(NSInteger) textSize
+                      color:(NSString) color
+                      showHalo:(BOOL) showHalo
+                      resolver:(RCTPromiseResolveBlock) resolve
+                      rejecter:(RCTPromiseRejectBlock) reject)
+
     // Set Listeners
 
     RCT_EXTERN_METHOD(setOnMapClickListener:(BOOL) setup

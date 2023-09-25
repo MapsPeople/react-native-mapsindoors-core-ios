@@ -14,6 +14,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
     private var directionsRenderer: MPDirectionsRenderer? = nil
     private var isListeningForLegChanges: Bool = false
     private var animationDuration: NSNumber = 5
+    private var showRouteLabel: Bool = true
 
     @objc public override static func requiresMainQueueSetup() -> Bool { return false }
 
@@ -159,7 +160,25 @@ public class DirectionsRendererModule: RCTEventEmitter {
 
         return resolve(nil)
     }
-    
+
+    @objc public func showRouteLegButtons(_ value: Bool, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        if (directionsRenderer == nil) {
+            directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+        }
+
+        guard let directionsRenderer else {
+            return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
+        }
+
+        if !value {
+            showRouteLabel = value
+        }else {
+            showRouteLabel = true
+        }
+
+        return resolve(nil)
+    }
+
     @objc public func setCameraAnimationDuration(_ duration: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         if (directionsRenderer != nil) {
             directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()

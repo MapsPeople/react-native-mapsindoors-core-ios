@@ -8,7 +8,21 @@ import React
 @objc(MapControlModule)
 public class MapControlModule: RCTEventEmitter {
     @objc override public static func requiresMainQueueSetup() -> Bool {return false}
-    
+
+    enum HexParsingError: Error {
+        case invalidHexString(String)
+    }
+    func colorFromHexString(hex: String) throws -> UIColor {
+        let regex = try! NSRegularExpression(pattern: "^#[0-9A-Fa-f]{6}$|^#[0-9A-Fa-f]{8}$")
+        let range = NSRange(location: 0, length: hex.utf16.count)
+
+        if (regex.matches(in: hex, range: range).count == 1) {
+            return UIColor(fromHexString: hex)!
+        } else {
+            throw HexParsingError.invalidHexString(hex)
+        }
+    }
+
     private var mapConfig: MPMapConfig? = nil
     
     /// Base overide for RCTEventEmitter.
@@ -510,6 +524,31 @@ public class MapControlModule: RCTEventEmitter {
             return resolve(nil)
         } catch let e {
             return doReject(reject, error: e)
+        }
+    }
+
+    @objc public func setLabelOptions(_ textSize: Int,
+                                        color: String,
+                                        showHalo: Bool,
+                                        resolver resolve: @escaping RCTPromiseResolveBlock,
+                                        rejecter reject: @escaping RCTPromiseRejectBlock) {
+
+        let mapsIndoorsData = MapsIndoorsData.sharedInstance
+        guard let mapControl = mapsIndoorsData.mapControl else {
+            return doReject(reject, message: "mapControl is not available")
+        }
+
+        let haloWidth: Float = showHalo ? 5.0 : 0.0
+        let haloBlur: Float = showHalo ? 5.0 : 0.0
+        let haloColor = UIColor.white
+
+        do {
+            let textColor = try colorFromHexString(hex: color)
+            mapControl.setMapLabelFont(font: UIFont.systemFont(ofSize: CGFloat(textSize)), textSize: Float(textSize), color: textColor, labelHaloColor: haloColor, labelHaloWidth: haloWidth, labelHaloBlur: haloBlur)
+            return resolve(nil)
+
+        } catch {
+            return doReject(reject, error: error)
         }
     }
 }
