@@ -14,7 +14,6 @@ public class DirectionsRendererModule: RCTEventEmitter {
     private var directionsRenderer: MPDirectionsRenderer? = nil
     private var isListeningForLegChanges: Bool = false
     private var animationDuration: NSNumber = 5
-    private var showRouteLabel: Bool = true
 
     @objc public override static func requiresMainQueueSetup() -> Bool { return false }
 
@@ -170,11 +169,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
             return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
         }
 
-        if !value {
-            showRouteLabel = value
-        }else {
-            showRouteLabel = true
-        }
+        directionsRenderer.showRouteLegButtons = value
 
         return resolve(nil)
     }

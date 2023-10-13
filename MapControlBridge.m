@@ -138,7 +138,7 @@
                       resolver:(RCTPromiseResolveBlock) resolve
                       rejecter:(RCTPromiseRejectBlock) reject)
 
-    RCT_EXTERN_METHOD(setLabelOptions:(NSInteger) textSize
+    RCT_EXTERN_METHOD(setLabelOptions:(nonnull NSNumber) textSize
                       color:(NSString) color
                       showHalo:(BOOL) showHalo
                       resolver:(RCTPromiseResolveBlock) resolve

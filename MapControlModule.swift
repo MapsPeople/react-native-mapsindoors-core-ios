@@ -527,8 +527,8 @@ public class MapControlModule: RCTEventEmitter {
         }
     }
 
-    @objc public func setLabelOptions(_ textSize: Int,
-                                        color: String,
+    @objc public func setLabelOptions(_ textSize: NSNumber?,
+                                        color: String?,
                                         showHalo: Bool,
                                         resolver resolve: @escaping RCTPromiseResolveBlock,
                                         rejecter reject: @escaping RCTPromiseRejectBlock) {
@@ -538,15 +538,27 @@ public class MapControlModule: RCTEventEmitter {
             return doReject(reject, message: "mapControl is not available")
         }
 
-        let haloWidth: Float = showHalo ? 5.0 : 0.0
-        let haloBlur: Float = showHalo ? 5.0 : 0.0
+        let haloWidth: Float = showHalo ? 1.0 : 0.0
+        let haloBlur: Float = showHalo ? 1.0 : 0.0
         let haloColor = UIColor.white
-
+        
         do {
-            let textColor = try colorFromHexString(hex: color)
-            mapControl.setMapLabelFont(font: UIFont.systemFont(ofSize: CGFloat(textSize)), textSize: Float(textSize), color: textColor, labelHaloColor: haloColor, labelHaloWidth: haloWidth, labelHaloBlur: haloBlur)
+            if (textSize != -1 && color != nil) {
+                let textColor = try colorFromHexString(hex: color!)
+                mapControl.setMapLabelFont(font: UIFont.systemFont(ofSize: CGFloat(truncating: textSize!)), textSize: Float(truncating: textSize!), color: textColor, labelHaloColor: haloColor, labelHaloWidth: haloWidth, labelHaloBlur: haloBlur)
+                return resolve(nil)
+            }
+            if (color != nil) {
+                let textColor = try colorFromHexString(hex: color!)
+                mapControl.setMapLabelFont(color: textColor, labelHaloColor: haloColor, labelHaloWidth: haloWidth, labelHaloBlur: haloBlur)
+                return resolve(nil)
+            }
+            if (textSize != -1) {
+                mapControl.setMapLabelFont(font: UIFont.systemFont(ofSize: CGFloat(truncating: textSize!)), textSize: Float(truncating: textSize!), labelHaloColor: haloColor, labelHaloWidth: haloWidth, labelHaloBlur: haloBlur)
+                return resolve(nil)
+            }
+            mapControl.setMapLabelFont(labelHaloColor: haloColor, labelHaloWidth: haloWidth, labelHaloBlur: haloBlur)
             return resolve(nil)
-
         } catch {
             return doReject(reject, error: error)
         }
