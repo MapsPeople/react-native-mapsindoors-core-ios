@@ -181,7 +181,7 @@ public class MapsIndoorsModule: NSObject {
         provider.name = name
 
         positionProvider = provider
-        MapsIndoorsData.sharedInstance.mapControl?.positionProvider = positionProvider
+        MPMapsIndoors.shared.positionProvider = positionProvider
 
         return resolve(nil)
     }
@@ -189,7 +189,7 @@ public class MapsIndoorsModule: NSObject {
     @objc public func removePositionProvider(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
 
         positionProvider = nil
-        MapsIndoorsData.sharedInstance.mapControl?.positionProvider = nil
+        MPMapsIndoors.shared.positionProvider = nil
 
         return resolve(nil)
     }

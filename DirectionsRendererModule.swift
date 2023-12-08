@@ -68,7 +68,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
         }
         
         directionsRenderer.padding = MapsIndoorsData.sharedInstance.mapControl!.mapPadding
-        
+
         DispatchQueue.main.sync {
             let succes = directionsRenderer.nextLeg()
 
@@ -92,7 +92,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
         }
               
         directionsRenderer.padding = MapsIndoorsData.sharedInstance.mapControl!.mapPadding
-        
+
         DispatchQueue.main.sync {
             let succes = directionsRenderer.previousLeg()
 
@@ -129,7 +129,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
         }
         
         directionsRenderer.padding = MapsIndoorsData.sharedInstance.mapControl!.mapPadding
-        
+
         DispatchQueue.main.sync {
             directionsRenderer.routeLegIndex = legIndex.intValue
 
@@ -235,7 +235,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
         }
         
         directionsRenderer.padding = MapsIndoorsData.sharedInstance.mapControl!.mapPadding
-        
+                
         guard let route = try? JSONDecoder().decode(MPRouteCodable.self, from: Data(routeString.utf8)) else {
             return doReject(reject, message: "Route could not be parsed")
         }
