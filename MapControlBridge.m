@@ -23,6 +23,14 @@
                       filterBehaviorJSON:(NSString) filterBehaviorJSON
                       resolver:(RCTPromiseResolveBlock) resolve
                       rejecter:(RCTPromiseRejectBlock) reject)
+    
+    RCT_EXTERN_METHOD(setHighlight:(NSString) locationIdsJSON
+                      highlightBehaviorJSON:(NSString) highlightBehaviorJSON
+                      resolver:(RCTPromiseResolveBlock) resolve
+                      rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(clearHighlight:(RCTPromiseResolveBlock) resolve
+                      rejecter:(RCTPromiseRejectBlock) reject)
 
     RCT_EXTERN_METHOD(showUserPosition:(BOOL) show
                       resolver:(RCTPromiseResolveBlock) resolve

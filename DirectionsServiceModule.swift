@@ -43,6 +43,26 @@ public class DirectionsServiceModule: NSObject {
         directionsVars.wayTypes.removeAll()
     }
     
+    @objc func addExcludeWayType(_ wayType: String, id: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let directionsVars = directionsVariables[id] else {
+            return doReject(reject, message: "directions service not found. Did you call create")
+        }
+        
+        guard let excludeWayType = MPHighway(typeString: wayType) as? MPHighway else {
+            return doReject(reject, message: "WayType not found")
+        }
+        
+        directionsVars.excludeWayTypes.append(excludeWayType)
+    }
+    
+    @objc func clearExcludeWayType(_ id: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let directionsVars = directionsVariables[id] else {
+            return doReject(reject, message: "directions service not found. Did you call create")
+        }
+        
+        directionsVars.excludeWayTypes.removeAll()
+    }
+    
     @objc func getRoute(_ originString: String, destinationString: String, id: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         
         guard let directionsVars = directionsVariables[id] else {
@@ -63,6 +83,10 @@ public class DirectionsServiceModule: NSObject {
             let query = MPDirectionsQuery(originPoint: origin!, destinationPoint: destination!)
             if (!directionsVars.wayTypes.isEmpty) {
                 query.avoidWayTypes = directionsVars.wayTypes
+            }
+            
+            if(!directionsVars.excludeWayTypes.isEmpty) {
+                query.avoidWayTypes = directionsVars.excludeWayTypes
             }
             
             if (directionsVars.date != nil) {
@@ -146,4 +170,5 @@ public class DirectionsVariables {
     var isDeparture: Bool = true
     var travelMode: MPTravelMode = MPTravelMode.walking
     var date: Date? = nil
+    var excludeWayTypes: [MPHighway] = []
 }

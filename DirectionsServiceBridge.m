@@ -23,6 +23,15 @@
         resolver:(RCTPromiseResolveBlock) resolve
         rejecter:(RCTPromiseRejectBlock) reject)
 
+    RCT_EXTERN_METHOD(addExcludeWayType: (NSString *) wayType
+        id: (NSString *) id
+        resolver:(RCTPromiseResolveBlock) resolve
+        rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(clearExcludeWayType: (NSString *) id
+        resolver:(RCTPromiseResolveBlock) resolve
+        rejecter:(RCTPromiseRejectBlock) reject)
+
     RCT_EXTERN_METHOD(getRoute: (NSString *) originString
         destinationString: (NSString *) destinationString
         id: (NSString *) id

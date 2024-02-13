@@ -11,7 +11,12 @@ class MapsIndoorsData {
     public static var sharedInstance = MapsIndoorsData()
 
     public var mapView: RCMapView?
-    public var mapControl: MPMapControl?
+    public var mapControl: MPMapControl? {
+        didSet {
+            directionsRenderer = nil
+        }
+    }
+    public var directionsRenderer: MPDirectionsRenderer? = nil
     public var isInitialized: Bool = false
 
     var mapControlListenerDelegate: MapControlDelegate?

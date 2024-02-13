@@ -143,4 +143,9 @@ public class UtilsModule: NSObject {
         MPMapsIndoors.shared.solution?.config.settings3D.wallOpacity = opacity
         return resolve(nil)
     }
+
+    @objc public func setNewSelection(_ isNewSelection: Bool, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        MPMapsIndoors.shared.solution?.config.newSelection = isNewSelection
+        return resolve(nil)
+    }
 }
