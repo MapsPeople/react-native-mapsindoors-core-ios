@@ -11,7 +11,6 @@ import React
 
 @objc(DirectionsRenderer)
 public class DirectionsRendererModule: RCTEventEmitter {
-    private var directionsRenderer: MPDirectionsRenderer? = nil
     private var isListeningForLegChanges: Bool = false
     private var animationDuration: NSNumber = 5
 
@@ -25,10 +24,12 @@ public class DirectionsRendererModule: RCTEventEmitter {
     }
 
     @objc public func clear(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if (directionsRenderer == nil) {
-            directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+        if (MapsIndoorsData.sharedInstance.directionsRenderer == nil) {
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
             animationDuration = 5
         }
+        
+        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
 
         guard let directionsRenderer else {
             return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
@@ -41,9 +42,11 @@ public class DirectionsRendererModule: RCTEventEmitter {
     }
 
     @objc public func getSelectedLegFloorIndex(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if (directionsRenderer == nil) {
-            directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+        if (MapsIndoorsData.sharedInstance.directionsRenderer == nil) {
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
         }
+        
+        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
 
         guard let directionsRenderer else {
             return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
@@ -59,9 +62,12 @@ public class DirectionsRendererModule: RCTEventEmitter {
     }
 
     @objc public func nextLeg(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if (directionsRenderer == nil) {
-            directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+        if (MapsIndoorsData.sharedInstance.directionsRenderer == nil) {
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
         }
+        
+        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
+
 
         guard let directionsRenderer else {
             return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
@@ -83,9 +89,12 @@ public class DirectionsRendererModule: RCTEventEmitter {
     }
 
     @objc public func previousLeg(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if (directionsRenderer == nil) {
-            directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+        if (MapsIndoorsData.sharedInstance.directionsRenderer == nil) {
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
         }
+        
+        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
+
 
         guard let directionsRenderer else {
             return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
@@ -108,9 +117,12 @@ public class DirectionsRendererModule: RCTEventEmitter {
     }
 
     @objc public func selectLegIndex(_ legIndex: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if (directionsRenderer == nil) {
-            directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+        if (MapsIndoorsData.sharedInstance.directionsRenderer == nil) {
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
         }
+        
+        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
+
 
         guard let directionsRenderer else {
             return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
@@ -143,9 +155,12 @@ public class DirectionsRendererModule: RCTEventEmitter {
     }
 
     @objc public func setAnimatedPolyline(_ animated: Bool, repeated: Bool, duration: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if (directionsRenderer == nil) {
-            directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+        if (MapsIndoorsData.sharedInstance.directionsRenderer == nil) {
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
         }
+        
+        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
+
 
         guard let directionsRenderer else {
             return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
@@ -161,9 +176,12 @@ public class DirectionsRendererModule: RCTEventEmitter {
     }
 
     @objc public func showRouteLegButtons(_ value: Bool, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if (directionsRenderer == nil) {
-            directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+        if (MapsIndoorsData.sharedInstance.directionsRenderer == nil) {
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
         }
+        
+        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
+
 
         guard let directionsRenderer else {
             return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
@@ -175,9 +193,12 @@ public class DirectionsRendererModule: RCTEventEmitter {
     }
 
     @objc public func setCameraAnimationDuration(_ duration: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if (directionsRenderer != nil) {
-            directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+        if (MapsIndoorsData.sharedInstance.directionsRenderer == nil) {
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
         }
+        
+        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
+
         
         guard let directionsRenderer else {
             return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
@@ -189,9 +210,12 @@ public class DirectionsRendererModule: RCTEventEmitter {
     }
 
     @objc public func setCameraViewFitMode(_ cameraFitMode: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if (directionsRenderer == nil) {
-            directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+        if (MapsIndoorsData.sharedInstance.directionsRenderer == nil) {
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
         }
+        
+        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
+
 
         guard let directionsRenderer else {
             return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
@@ -220,15 +244,16 @@ public class DirectionsRendererModule: RCTEventEmitter {
     }
 
     @objc public func setPolyLineColors(_ foregroundString: String, backgroundString: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if (directionsRenderer == nil) {
-            directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
-        }
+        return resolve(nil)
     }
 
     @objc public func setRoute(_ routeString: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if (directionsRenderer == nil) {
-            directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+        if (MapsIndoorsData.sharedInstance.directionsRenderer == nil) {
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
         }
+        
+        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
+
 
         guard let directionsRenderer else {
             return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")

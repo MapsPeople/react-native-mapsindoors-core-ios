@@ -17,7 +17,7 @@ public class MapControlModule: RCTEventEmitter {
         let range = NSRange(location: 0, length: hex.utf16.count)
 
         if (regex.matches(in: hex, range: range).count == 1) {
-            return UIColor(fromHexString: hex)!
+            return UIColor(hex: hex)!
         } else {
             throw HexParsingError.invalidHexString(hex)
         }
@@ -100,6 +100,30 @@ public class MapControlModule: RCTEventEmitter {
         }
     }
     
+    @objc public func setHighlight(_ locationIdsJSON: String,
+                                             highlightBehaviorJSON: String,
+                                             resolver resolve: RCTPromiseResolveBlock,
+                                             rejecter reject: RCTPromiseRejectBlock) {
+        do {
+            let locations: [String] = try fromJSON(locationIdsJSON)
+            let highlightBehavior: MPHighlightBehavior = try fromJSON(highlightBehaviorJSON)
+            let locs = (locations.compactMap{MPMapsIndoors.shared.locationWith(locationId: $0)})
+
+            MapsIndoorsData.sharedInstance.mapControl?.setHighlight(locations: locs, behavior: highlightBehavior)
+
+            return resolve(true)
+        } catch let e {
+            return doReject(reject, error: e)
+        }
+    }
+
+    @objc public func clearHighlight(_ resolve: @escaping RCTPromiseResolveBlock,
+                                  rejecter reject: @escaping RCTPromiseRejectBlock) {
+        DispatchQueue.main.async {
+            MapsIndoorsData.sharedInstance.mapControl?.clearHighlight()
+            return resolve(nil)
+        }
+    }
     
     @objc public func showUserPosition(_ show: Bool,
                                        resolver resolve: RCTPromiseResolveBlock,

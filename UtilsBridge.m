@@ -60,4 +60,8 @@
           resolver:(RCTPromiseResolveBlock) resolve
           rejecter:(RCTPromiseRejectBlock) reject)
 
+    RCT_EXTERN_METHOD(setNewSelection: (BOOL) value
+          resolver:(RCTPromiseResolveBlock) resolve
+          rejecter:(RCTPromiseRejectBlock) reject)
+
 @end
