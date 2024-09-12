@@ -526,6 +526,15 @@ RCT_EXTERN_METHOD(requiresMainQueueSetup)
                       resolver:(RCTPromiseResolveBlock) resolve
                       rejecter:(RCTPromiseRejectBlock) reject)
 
+    RCT_EXTERN_METHOD(setLabelStyleGraphic: (NSString *) displayRuleId
+                      value:(NSString *) value
+                      resolver:(RCTPromiseResolveBlock) resolve
+                      rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(getLabelStyleGraphic: (NSString *) displayRuleId
+                      resolver:(RCTPromiseResolveBlock) resolve
+                      rejecter:(RCTPromiseRejectBlock) reject)
+
     RCT_EXTERN_METHOD(getPolygonLightnessFactor: (NSString *) displayRuleId
                       resolver:(RCTPromiseResolveBlock) resolve
                       rejecter:(RCTPromiseRejectBlock) reject)
@@ -597,6 +606,78 @@ RCT_EXTERN_METHOD(requiresMainQueueSetup)
                       value:(BOOL) value
                       resolver:(RCTPromiseResolveBlock) resolve
                       rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(getModel3DModel: (NSString *) displayRuleId
+                      resolver:(RCTPromiseResolveBlock) resolve
+                      rejecter:(RCTPromiseRejectBlock) reject)
+    
+    RCT_EXTERN_METHOD(setModel3DModel: (NSString *) displayRuleId
+                        value:(NSString *) value
+                        resolver:(RCTPromiseResolveBlock) resolve
+                        rejecter:(RCTPromiseRejectBlock) reject)
+    
+    RCT_EXTERN_METHOD(getModel3DRotationX: (NSString *) displayRuleId
+                      resolver:(RCTPromiseResolveBlock) resolve
+                      rejecter:(RCTPromiseRejectBlock) reject)
+    
+    RCT_EXTERN_METHOD(setModel3DRotationX: (NSString *) displayRuleId
+                      value:(nonnull NSNumber *) value
+                      resolver:(RCTPromiseResolveBlock) resolve
+                      rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(getModel3DRotationY: (NSString *) displayRuleId
+                      resolver:(RCTPromiseResolveBlock) resolve
+                      rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(setModel3DRotationY: (NSString *) displayRuleId
+                        value:(nonnull NSNumber *) value
+                        resolver:(RCTPromiseResolveBlock) resolve
+                        rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(getModel3DRotationZ: (NSString *) displayRuleId
+                      resolver:(RCTPromiseResolveBlock) resolve
+                      rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(setModel3DRotationZ: (NSString *) displayRuleId
+                        value:(nonnull NSNumber *) value
+                        resolver:(RCTPromiseResolveBlock) resolve
+                        rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(getModel3DScale: (NSString *) displayRuleId
+                        resolver:(RCTPromiseResolveBlock) resolve
+                        rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(setModel3DScale: (NSString *) displayRuleId
+                        value:(nonnull NSNumber *) value
+                        resolver:(RCTPromiseResolveBlock) resolve
+                        rejecter:(RCTPromiseRejectBlock) reject)
+    
+    RCT_EXTERN_METHOD(getModel3DZoomFrom: (NSString *) displayRuleId
+                        resolver:(RCTPromiseResolveBlock) resolve
+                        rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(setModel3DZoomFrom: (NSString *) displayRuleId
+                        value:(nonnull NSNumber *) value
+                        resolver:(RCTPromiseResolveBlock) resolve
+                        rejecter:(RCTPromiseRejectBlock) reject)
+    
+    RCT_EXTERN_METHOD(getModel3DZoomTo: (NSString *) displayRuleId
+                        resolver:(RCTPromiseResolveBlock) resolve
+                        rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(setModel3DZoomTo: (NSString *) displayRuleId
+                        value:(nonnull NSNumber *) value
+                        resolver:(RCTPromiseResolveBlock) resolve
+                        rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(isModel3DVisible: (NSString *) displayRuleId
+                        resolver:(RCTPromiseResolveBlock) resolve
+                        rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(setModel3DVisible: (NSString *) displayRuleId
+                        value:(BOOL) value
+                        resolver:(RCTPromiseResolveBlock) resolve
+                        rejecter:(RCTPromiseRejectBlock) reject)
 
 // Start of tail
 

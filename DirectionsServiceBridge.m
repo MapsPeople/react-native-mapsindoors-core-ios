@@ -34,6 +34,8 @@
 
     RCT_EXTERN_METHOD(getRoute: (NSString *) originString
         destinationString: (NSString *) destinationString
+        stopsString: (NSArray<NSString *> _Nullable) stopsString
+        optimize: (BOOL) optimize
         id: (NSString *) id
         resolver:(RCTPromiseResolveBlock) resolve
         rejecter:(RCTPromiseRejectBlock) reject)

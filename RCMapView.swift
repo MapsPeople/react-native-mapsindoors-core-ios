@@ -10,5 +10,7 @@ import MapsIndoors
 protocol RCMapView {
     func animateCamera(cameraUpdate: CameraUpdate, duration: Int) throws
     func moveCamera(cameraUpdate: CameraUpdate) throws
-    func getConfig() -> MPMapConfig
+    func getConfig(config: NSDictionary) -> MPMapConfig
+    func getMapControl() -> MPMapControl?
+    func setMapControl(mapControl: MPMapControl)
 }

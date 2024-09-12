@@ -148,4 +148,25 @@ public class UtilsModule: NSObject {
         MPMapsIndoors.shared.solution?.config.newSelection = isNewSelection
         return resolve(nil)
     }
+
+    @objc public func setSelectable(_ settingsId: String, value: Bool, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        if (settingsId == "solution") {
+            MPMapsIndoors.shared.solution?.config.locationSettings.selectable = value
+        } else {
+            if let location = MPMapsIndoors.shared.locationWith(locationId: settingsId) {
+                if location.locationSettings == nil {
+                    location.locationSettings = MPLocationSettings()
+                }
+                location.locationSettings?.selectable = value
+            } else {
+                if let type = MPMapsIndoors.shared.solution?.types.first(where: {$0.name == settingsId}) {
+                    if type.locationSettings == nil {
+                        type.locationSettings = MPLocationSettings()
+                    }
+                    type.locationSettings?.selectable = value
+                }
+            }
+        }
+        return resolve(nil)
+    }
 }

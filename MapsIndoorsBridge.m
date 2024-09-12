@@ -7,9 +7,10 @@ RCT_EXTERN_METHOD(requiresMainQueueSetup)
                       location:(NSString *)location
                       date:(nonnull NSNumber *)date)
 
-    RCT_EXTERN_METHOD(loadMapsIndoors: (NSString *) apiKey
-                      resolver:(RCTPromiseResolveBlock) resolve
-                      rejecter:(RCTPromiseRejectBlock) reject)
+    RCT_EXTERN_METHOD(loadMapsIndoors:(NSString *)apiKey
+                  optionalStrings:(NSArray<NSString *> _Nullable)optionalStrings
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
 
     RCT_EXTERN_METHOD(test)
 
@@ -113,4 +114,16 @@ RCT_EXTERN_METHOD(requiresMainQueueSetup)
     RCT_EXTERN_METHOD(setLanguage:(NSString) language
                       resolver:(RCTPromiseResolveBlock) resolve
                       rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(addVenuesToSync:(NSArray<NSString *> *)venues
+                    resolver:(RCTPromiseResolveBlock)resolve
+                    rejecter:(RCTPromiseRejectBlock)reject)
+
+    RCT_EXTERN_METHOD(removeVenuesToSync:(NSArray<NSString *> *)venues
+                    resolver:(RCTPromiseResolveBlock)resolve
+                    rejecter:(RCTPromiseRejectBlock)reject)
+
+    RCT_EXTERN_METHOD(getSyncedVenues:(RCTPromiseResolveBlock)resolve
+                    rejecter:(RCTPromiseRejectBlock)reject)
+
 @end

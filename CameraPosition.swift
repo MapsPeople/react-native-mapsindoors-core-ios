@@ -9,7 +9,7 @@ import MapsIndoors
 
 public struct CameraPosition: Codable {
     let zoom: Float
-    let tilt: Float // TODO: this is called viewingAngle in MPCameraPosition(Codable)
+    let tilt: Float
     let bearing: Float
     let target: MPPoint
 }

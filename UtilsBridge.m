@@ -64,4 +64,8 @@
           resolver:(RCTPromiseResolveBlock) resolve
           rejecter:(RCTPromiseRejectBlock) reject)
 
+    RCT_EXTERN_METHOD(setSelectable: (NSString *) settingsId
+          value: (BOOL) value
+          resolver:(RCTPromiseResolveBlock) resolve
+          rejecter:(RCTPromiseRejectBlock) reject)
 @end

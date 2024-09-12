@@ -45,6 +45,8 @@
       rejecter:(RCTPromiseRejectBlock) reject)
 
     RCT_EXTERN_METHOD(setRoute: (NSString *) routeString
+      stopIcons:(NSString *) stopIcons
+      legIndex: (nonnull NSNumber *) legIndex
       resolver:(RCTPromiseResolveBlock) resolve
       rejecter:(RCTPromiseRejectBlock) reject)
 
@@ -54,8 +56,11 @@
       resolver:(RCTPromiseResolveBlock) resolve
       rejecter:(RCTPromiseRejectBlock) reject)
 
-      RCT_EXTERN_METHOD(showRouteLegButtons: (BOOL) value
+    RCT_EXTERN_METHOD(showRouteLegButtons: (BOOL) value
       resolver:(RCTPromiseResolveBlock) resolve
       rejecter:(RCTPromiseRejectBlock) reject)
 
+    RCT_EXTERN_METHOD(setDefaultRouteStopIcon: (NSString *) iconString
+      resolver:(RCTPromiseResolveBlock) resolve
+      rejecter:(RCTPromiseRejectBlock) reject)
 @end
