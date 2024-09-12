@@ -20,6 +20,7 @@ private func doReject(_ reject: RCTPromiseRejectBlock, displayRuleId: String,
 
 @objc(DisplayRule)
 public class MPDisplayRuleModule: NSObject {
+
     @objc static func requiresMainQueueSetup() -> Bool { return false }
     
     private func getIconPlacement(iconPlacement: NSNumber) -> MPIconPlacement {
@@ -41,6 +42,10 @@ public class MPDisplayRuleModule: NSObject {
         switch(labelType.intValue) {
         case 0:
             return .flat
+        case 1:
+            return .floating
+        case 2:
+            return .graphic
         default:
             return .floating
         }
@@ -1241,6 +1246,37 @@ public class MPDisplayRuleModule: NSObject {
         
         return resolve(nil)
     }
+
+    @objc public func setLabelStyleGraphic(_ displayRuleId: String, value: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+        
+        guard let labelGraphic = try? JSONDecoder().decode(LabelGraphic.self, from: value.data(using: .utf8)!) else {
+            return doReject(reject, message: "Could not parse label graphic")
+        }
+        
+        displayRule.labelStyleGraphicBackgroundImage = labelGraphic.backgroundImage
+        displayRule.labelStyleGraphicStretchX = labelGraphic.stretchX
+        displayRule.labelStyleGraphicStretchY = labelGraphic.stretchY
+        displayRule.labelStyleGraphicContent = labelGraphic.content
+        
+        return resolve(nil)
+    }
+
+    @objc public func getLabelStyleGraphic(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+        
+        let labelGraphic = LabelGraphic(backgroundImage: displayRule.labelStyleGraphicBackgroundImage, stretchX: displayRule.labelStyleGraphicStretchX, stretchY: displayRule.labelStyleGraphicStretchY, content: displayRule.labelStyleGraphicContent)
+        
+        guard let graphicJson = try? JSONEncoder().encode(labelGraphic) else {
+            return doReject(reject, message: "Could not encode label graphic")
+        }
+        
+        return resolve(String(data: graphicJson, encoding: String.Encoding.utf8))
+    }
     
     @objc public func getPolygonLightnessFactor(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
@@ -1396,6 +1432,162 @@ public class MPDisplayRuleModule: NSObject {
         }
         
         displayRule.badgeVisible = value
+        
+        return resolve(nil)
+    }
+
+    @objc public func getModel3DModel(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+        
+        return resolve(displayRule.model3DModel)
+    }
+
+    @objc public func setModel3DModel(_ displayRuleId: String, value: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+        
+        displayRule.model3DModel = value
+        
+        return resolve(nil)
+    }
+
+    @objc public func getModel3DRotationX(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+        
+        return resolve(displayRule.model3DRotationX)
+    }
+
+    @objc public func setModel3DRotationX(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+        
+        if (value != -1) {
+            displayRule.model3DRotationX = value.doubleValue
+        }
+        
+        return resolve(nil)
+    }
+
+    @objc public func getModel3DRotationY(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+        
+        return resolve(displayRule.model3DRotationY)
+    }
+
+    @objc public func setModel3DRotationY(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+        
+        if (value != -1) {
+            displayRule.model3DRotationY = value.doubleValue
+        }
+        
+        return resolve(nil)
+    }
+
+    @objc public func getModel3DRotationZ(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+        
+        return resolve(displayRule.model3DRotationZ)
+    }
+
+    @objc public func setModel3DRotationZ(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+        
+        if (value != -1) {
+            displayRule.model3DRotationZ = value.doubleValue
+        }
+        
+        return resolve(nil)
+    }
+
+    @objc public func isModel3DVisible(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+        
+        return resolve(displayRule.model3DVisible)
+    }
+
+    @objc public func setModel3DVisible(_ displayRuleId: String, value: Bool, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+        
+        displayRule.model3DVisible = value
+        
+        return resolve(nil)
+    }
+
+    @objc public func getModel3DZoomFrom(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+        
+        return resolve(displayRule.model3DZoomFrom)
+    }
+
+    @objc public func setModel3DZoomFrom(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+        
+        if (value != -1) {
+            displayRule.model3DZoomFrom = value.doubleValue
+        }
+        
+        return resolve(nil)
+    }
+
+    @objc public func getModel3DZoomTo(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+        
+        return resolve(displayRule.model3DZoomTo)
+    }
+
+    @objc public func setModel3DZoomTo(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+        
+        if (value != -1) {
+            displayRule.model3DZoomTo = value.doubleValue
+        }
+        
+        return resolve(nil)
+    }
+
+    @objc public func getModel3DScale(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+        
+        return resolve(displayRule.model3DScale)
+    }
+
+    @objc public func setModel3DScale(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+
+        if (value != -1) {
+            displayRule.model3DScale = value.doubleValue
+        }
         
         return resolve(nil)
     }

@@ -5,6 +5,7 @@
 //  Created by Tim Mikkelsen on 01/05/2023.
 //
 
+import MapsIndoorsCore
 import MapsIndoors
 import MapsIndoorsCodable
 import React
@@ -25,7 +26,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
 
     @objc public func clear(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         if (MapsIndoorsData.sharedInstance.directionsRenderer == nil) {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
             animationDuration = 5
         }
         
@@ -35,15 +36,16 @@ public class DirectionsRendererModule: RCTEventEmitter {
             return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
         }
         
-        DispatchQueue.main.sync {
+        DispatchQueue.main.async {
             directionsRenderer.clear()
+            directionsRenderer.route = nil
         }
         return resolve(nil)
     }
 
     @objc public func getSelectedLegFloorIndex(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         if (MapsIndoorsData.sharedInstance.directionsRenderer == nil) {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
         }
         
         let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
@@ -52,7 +54,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
             return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
         }
         
-        directionsRenderer.padding = MapsIndoorsData.sharedInstance.mapControl!.mapPadding
+        directionsRenderer.padding = MapsIndoorsData.sharedInstance.mapView!.getMapControl()!.mapPadding
         
         guard let legIndex = directionsRenderer.route?.legs[directionsRenderer.routeLegIndex].end_location.zLevel.int32Value else {
             return doReject(reject, message: "No current floor available")
@@ -63,7 +65,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
 
     @objc public func nextLeg(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         if (MapsIndoorsData.sharedInstance.directionsRenderer == nil) {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
         }
         
         let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
@@ -73,15 +75,15 @@ public class DirectionsRendererModule: RCTEventEmitter {
             return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
         }
         
-        directionsRenderer.padding = MapsIndoorsData.sharedInstance.mapControl!.mapPadding
+        directionsRenderer.padding = MapsIndoorsData.sharedInstance.mapView!.getMapControl()!.mapPadding
 
-        DispatchQueue.main.sync {
+        DispatchQueue.main.async {
             let succes = directionsRenderer.nextLeg()
 
             if succes {
-                directionsRenderer.animate(duration: animationDuration.doubleValue)
-                if (isListeningForLegChanges) {
-                    sendEvent(withName: MapsIndoorsData.Event.onLegSelected.rawValue, body: ["leg": directionsRenderer.routeLegIndex])
+                directionsRenderer.animate(duration: self.animationDuration.doubleValue)
+                if (self.isListeningForLegChanges) {
+                    self.sendEvent(withName: MapsIndoorsData.Event.onLegSelected.rawValue, body: ["leg": directionsRenderer.routeLegIndex])
                 }
             }
         }
@@ -90,7 +92,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
 
     @objc public func previousLeg(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         if (MapsIndoorsData.sharedInstance.directionsRenderer == nil) {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
         }
         
         let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
@@ -100,15 +102,15 @@ public class DirectionsRendererModule: RCTEventEmitter {
             return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
         }
               
-        directionsRenderer.padding = MapsIndoorsData.sharedInstance.mapControl!.mapPadding
+        directionsRenderer.padding = MapsIndoorsData.sharedInstance.mapView!.getMapControl()!.mapPadding
 
-        DispatchQueue.main.sync {
+        DispatchQueue.main.async {
             let succes = directionsRenderer.previousLeg()
 
             if succes {
-                directionsRenderer.animate(duration: animationDuration.doubleValue)
-                if (isListeningForLegChanges) {
-                    sendEvent(withName: MapsIndoorsData.Event.onLegSelected.rawValue, body: ["leg": directionsRenderer.routeLegIndex])
+                directionsRenderer.animate(duration: self.animationDuration.doubleValue)
+                if (self.isListeningForLegChanges) {
+                    self.sendEvent(withName: MapsIndoorsData.Event.onLegSelected.rawValue, body: ["leg": directionsRenderer.routeLegIndex])
                 }
             }
         }
@@ -118,7 +120,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
 
     @objc public func selectLegIndex(_ legIndex: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         if (MapsIndoorsData.sharedInstance.directionsRenderer == nil) {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
         }
         
         let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
@@ -140,15 +142,15 @@ public class DirectionsRendererModule: RCTEventEmitter {
             return doReject(reject, message: "Tried to select route leg index \(legIndex.intValue) outside of range 0..\((route.legs.count)-1)")
         }
         
-        directionsRenderer.padding = MapsIndoorsData.sharedInstance.mapControl!.mapPadding
+        directionsRenderer.padding = MapsIndoorsData.sharedInstance.mapView!.getMapControl()!.mapPadding
 
-        DispatchQueue.main.sync {
+        DispatchQueue.main.async {
             directionsRenderer.routeLegIndex = legIndex.intValue
 
-            directionsRenderer.animate(duration: animationDuration.doubleValue)
+            directionsRenderer.animate(duration: self.animationDuration.doubleValue)
 
-            if isListeningForLegChanges {
-                sendEvent(withName: MapsIndoorsData.Event.onLegSelected.rawValue, body: ["leg": directionsRenderer.routeLegIndex])
+            if self.isListeningForLegChanges {
+                self.sendEvent(withName: MapsIndoorsData.Event.onLegSelected.rawValue, body: ["leg": directionsRenderer.routeLegIndex])
             }
         }
         return resolve(nil)
@@ -156,7 +158,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
 
     @objc public func setAnimatedPolyline(_ animated: Bool, repeated: Bool, duration: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         if (MapsIndoorsData.sharedInstance.directionsRenderer == nil) {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
         }
         
         let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
@@ -177,7 +179,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
 
     @objc public func showRouteLegButtons(_ value: Bool, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         if (MapsIndoorsData.sharedInstance.directionsRenderer == nil) {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
         }
         
         let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
@@ -194,7 +196,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
 
     @objc public func setCameraAnimationDuration(_ duration: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         if (MapsIndoorsData.sharedInstance.directionsRenderer == nil) {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
         }
         
         let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
@@ -211,7 +213,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
 
     @objc public func setCameraViewFitMode(_ cameraFitMode: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         if (MapsIndoorsData.sharedInstance.directionsRenderer == nil) {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
         }
         
         let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
@@ -230,12 +232,49 @@ public class DirectionsRendererModule: RCTEventEmitter {
             camFitMode = MPCameraViewFitMode.firstStepAligned
         case 2:
             camFitMode = MPCameraViewFitMode.startToEndAligned
+        case 3:
+            camFitMode = MPCameraViewFitMode.none
         default:
             camFitMode = MPCameraViewFitMode.northAligned
         }
         
         directionsRenderer.fitMode = camFitMode!
         return resolve(nil)
+    }
+    
+    @objc public func setDefaultRouteStopIcon(_ defaultIcon: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        if (MapsIndoorsData.sharedInstance.directionsRenderer == nil) {
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
+        }
+        
+        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
+        
+        guard let directionsRenderer else  {
+            return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
+        }
+        
+        Task {
+            if (isValidUrl(defaultIcon)) {
+                let test = IconStopUrl(image: try await downloadImage(from: URL(string: defaultIcon)!))
+                directionsRenderer.defaultRouteStopIcon = IconStopUrl(image: try await downloadImage(from: URL(string: defaultIcon)!))
+            }else {
+                do {
+                    var deficon = defaultIcon
+                    deficon.removeLast()
+                    let iconConfig = try JSONDecoder().decode(RouteIcon.self, from: deficon.data(using: .utf8)!)
+                    if (iconConfig != nil) {
+                        directionsRenderer.defaultRouteStopIcon = iconConfig.getIcon()
+                    }else {
+                        directionsRenderer.defaultRouteStopIcon = nil
+                    }
+                }catch {
+                    print(error)
+                }
+                
+            }
+            
+            resolve(nil)
+        }
     }
 
     @objc public func setOnLegSelectedListener(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
@@ -247,9 +286,9 @@ public class DirectionsRendererModule: RCTEventEmitter {
         return resolve(nil)
     }
 
-    @objc public func setRoute(_ routeString: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+    @objc public func setRoute(_ routeString: String, stopIcons: String, legIndex: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         if (MapsIndoorsData.sharedInstance.directionsRenderer == nil) {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapControl?.newDirectionsRenderer()
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
         }
         
         let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
@@ -259,18 +298,62 @@ public class DirectionsRendererModule: RCTEventEmitter {
             return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
         }
         
-        directionsRenderer.padding = MapsIndoorsData.sharedInstance.mapControl!.mapPadding
+        directionsRenderer.padding = MapsIndoorsData.sharedInstance.mapView!.getMapControl()!.mapPadding
                 
-        guard let route = try? JSONDecoder().decode(MPRouteCodable.self, from: Data(routeString.utf8)) else {
+        guard let route = try? JSONDecoder().decode(MPRouteInternal.self, from: Data(routeString.utf8)) else {
             return doReject(reject, message: "Route could not be parsed")
         }
-
-        DispatchQueue.main.sync {
-            directionsRenderer.route = route
-            directionsRenderer.routeLegIndex = 0
-            directionsRenderer.animate(duration: animationDuration.doubleValue)
+        
+        guard legIndex.intValue >= 0 else {
+            return doReject(reject, message: "Tried to select negative route leg index \(legIndex.intValue)")
         }
 
-        resolve(nil)
+        guard legIndex.intValue < (route.legs.count) else {
+            return doReject(reject, message: "Tried to select route leg index \(legIndex.intValue) outside of range 0..\((route.legs.count)-1)")
+        }
+        
+        Task {
+            var stopIconss: [Int: String]? = nil
+            stopIconss = try? JSONDecoder().decode([Int: String].self, from: Data(stopIcons.utf8))
+            
+            var icons: [Int : any MPRouteStopIconProvider] = [:]
+            if (stopIconss != nil) {
+                for icon in stopIconss! {
+                    if (isValidUrl(icon.value)) {
+                        icons[icon.key] = IconStopUrl(image: try await downloadImage(from: URL(string: icon.value)!))
+                    }else {
+                        var ic = icon.value
+                        ic.removeLast()
+                        let iconConfig = try? JSONDecoder().decode(RouteIcon.self, from: ic.data(using: .utf8)!)
+                        if (iconConfig != nil) {
+                            icons[icon.key] = iconConfig!.getIcon()
+                        }
+                    }
+                }
+            }
+            
+
+            DispatchQueue.main.sync {
+                directionsRenderer.route = route
+                directionsRenderer.routeLegIndex = legIndex.intValue
+                directionsRenderer.render(stopIcons: icons)
+            }
+
+            resolve(nil)
+        }
     }
+    
+    
+    func downloadImage(from url: URL) async throws -> UIImage {
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return UIImage(data: data)!
+    }
+    
+    func isValidUrl(_ urlString: String) -> Bool {
+        if let url = URL(string: urlString) {
+            return url.scheme != nil && url.host != nil
+        }
+        return false
+    }
+
 }

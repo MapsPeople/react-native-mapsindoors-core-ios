@@ -15,14 +15,15 @@ public class MapsIndoorsModule: NSObject {
 
     private var positionProvider: ReactPositionProvider?
 
-    @objc
-    public func loadMapsIndoors(_ apiKey: String,
-                                resolver resolve: @escaping RCTPromiseResolveBlock,
-                                rejecter reject: @escaping RCTPromiseRejectBlock)
-    {
+    @objc(loadMapsIndoors:optionalStrings:resolver:rejecter:)
+    func loadMapsIndoors(apiKey: String, optionalStrings: [String]?, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) -> Void {
         Task {
             do {
-                try await MPMapsIndoors.shared.load(apiKey: apiKey)
+                if (optionalStrings != nil) {
+                    try await MPMapsIndoors.shared.load(apiKey: apiKey, venueIds: optionalStrings!)
+                }else {
+                    try await MPMapsIndoors.shared.load(apiKey: apiKey)
+                }
                 MapsIndoorsData.sharedInstance.isInitialized = true
                 return resolve([])
             } catch let e /*as MPError*/ {
@@ -120,7 +121,7 @@ public class MapsIndoorsModule: NSObject {
     }
 
     @objc public func getMapStyles(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        guard let mapControl = MapsIndoorsData.sharedInstance.mapControl else {
+        guard let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() else {
             return doReject(reject, message: "getMapStyles: Must create MapControl first")
         }
         guard let venue = mapControl.currentVenue else {
@@ -293,4 +294,34 @@ public class MapsIndoorsModule: NSObject {
         }
     }
 
+    @objc(addVenuesToSync:resolver:rejecter:)
+    func addVenuesToSync(venues: [String], resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) -> Void {
+        Task {
+            do {
+                try await MPMapsIndoors.shared.addVenuesToSync(venueIds: venues)
+                return resolve(nil)
+            }
+            catch let e {
+                return doReject(reject, error: e)
+            }
+        }
+    }
+
+    @objc(removeVenuesToSync:resolver:rejecter:)
+    func removeVenuesToSync(venues: [String], resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) -> Void {
+        Task {
+            do {
+                try await MPMapsIndoors.shared.removeVenuesToSync(venueIds: venues)
+                return resolve(nil)
+            }
+            catch let e {
+                return doReject(reject, error: e)
+            }
+        }
+    }
+
+    @objc(getSyncedVenues:rejecter:)
+    func getSyncedVenues(resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) -> Void {
+        return resolve(MPMapsIndoors.shared.venuesToSync)
+    }
 }

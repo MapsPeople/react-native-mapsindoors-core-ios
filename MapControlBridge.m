@@ -189,4 +189,25 @@
                       resolver:(RCTPromiseResolveBlock) resolve
                       rejecter:(RCTPromiseRejectBlock) reject)
 
+    RCT_EXTERN_METHOD(setBuildingSelectionMode:(nonnull NSNumber *) setBuildingSelectionMode
+                      resolver:(RCTPromiseResolveBlock) resolve
+                      rejecter:(RCTPromiseRejectBlock) reject)
+    
+    RCT_EXTERN_METHOD(getBuildingSelectionMode: (RCTPromiseResolveBlock) resolve
+                      rejecter:(RCTPromiseRejectBlock) reject)
+                    
+    RCT_EXTERN_METHOD(setFloorSelectionMode:(nonnull NSNumber *) setFloorSelectionMode
+                      resolver:(RCTPromiseResolveBlock) resolve
+                      rejecter:(RCTPromiseRejectBlock) reject)
+    
+    RCT_EXTERN_METHOD(getFloorSelectionMode: (RCTPromiseResolveBlock) resolve
+                        rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(setHiddenFeatures: (NSString) hiddenFeatures
+                      resolver:(RCTPromiseResolveBlock) resolve
+                      rejecter:(RCTPromiseRejectBlock) reject)
+    
+    RCT_EXTERN_METHOD(getHiddenFeatures: (RCTPromiseResolveBlock) resolve
+                      rejecter:(RCTPromiseRejectBlock) reject)
+
 @end

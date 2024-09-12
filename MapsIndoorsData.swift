@@ -8,14 +8,13 @@ protocol LiveDataDelegate {
 }
 
 class MapsIndoorsData {
-    public static var sharedInstance = MapsIndoorsData()
+    public static var sharedInstance: MapsIndoorsData = MapsIndoorsData()
+    
+    public static func reset() {
+        sharedInstance = MapsIndoorsData()
+    }
 
     public var mapView: RCMapView?
-    public var mapControl: MPMapControl? {
-        didSet {
-            directionsRenderer = nil
-        }
-    }
     public var directionsRenderer: MPDirectionsRenderer? = nil
     public var isInitialized: Bool = false
 
@@ -74,6 +73,13 @@ class MapControlDelegate: MPMapControlDelegate, LiveDataDelegate, MPFloorSelecto
     }
 
     // MPMapControlDelegate:
+    
+    func didChangeCameraPosition() -> Bool {
+        if (respondToCameraEvents) {
+            sendEvent(event: .cameraEvent, body: ["event": 5])
+        }
+        return true;
+    }
 
     func cameraIdle() -> Bool {
         if (respondToCameraEvents) {
@@ -109,6 +115,8 @@ class MapControlDelegate: MPMapControlDelegate, LiveDataDelegate, MPFloorSelecto
         if (respondToDidChangeFloorIndex) {
             sendEvent(event: .onFloorUpdate, body: ["floorIndex": floorIndex])
         }
+        
+        MapsIndoorsData.sharedInstance.floorSelector?.onFloorSelectionChanged(newFloor: NSNumber(value: floorIndex))
         return false
     }
 
@@ -123,6 +131,7 @@ class MapControlDelegate: MPMapControlDelegate, LiveDataDelegate, MPFloorSelecto
         if (respondToDidChangeBuilding) {
             sendEvent(event: .onBuildingFoundAtCameraTarget, body: ["building": selectedBuilding.map{ toJSON(MPBuildingCodable(withBuilding:($0))) }])
         }
+        MapsIndoorsData.sharedInstance.floorSelector?.building = selectedBuilding
         return false
     }
 
@@ -155,10 +164,11 @@ class MapControlDelegate: MPMapControlDelegate, LiveDataDelegate, MPFloorSelecto
 
     func onFloorIndexChanged(_ floorIndex: NSNumber) {
         sendEvent(event: .onFloorUpdate, body: ["floorIndex": floorIndex])
+        MapsIndoorsData.sharedInstance.floorSelector?.onFloorSelectionChanged(newFloor: floorIndex)
     }
 
     func floorSelector(method: FloorSelector.Event, args: [String: Any]) {
-        let body = try! ["method": method].merging(args, uniquingKeysWith: { _,_ in throw MPError.unknownError })
+        let body = try! ["method": method.rawValue].merging(args, uniquingKeysWith: { _,_ in throw MPError.unknownError })
 
         sendEvent(event: .floorSelector, body: body)
     }
@@ -173,13 +183,21 @@ class FloorSelector: UIView, MPCustomFloorSelector {
         case setUserPositionFloor
         // TODO: the rest are not implemented since they are not available from the MPCustomFloorSelector protocol, and are not implemented in flutter
 //        case setSelectedFloor
-//        case setSelectedFloorByFloorIndex
+        case setSelectedFloorByFloorIndex
 //        case zoomLevelChanged
     }
+    
+    lazy var allEvents: [String] = {
+        var allEventNames: [String] = Event.allCases.map{$0.rawValue}
+        return allEventNames
+    }()
 
     var building: MapsIndoors.MPBuilding?
+    var latestBuilding: MapsIndoors.MPBuilding?
     var delegate: MapsIndoors.MPFloorSelectorDelegate?
 
+    var hide: Bool = false
+    
     var floorIndex: NSNumber?
 
     var autoFloorChange = true
@@ -198,22 +216,35 @@ class FloorSelector: UIView, MPCustomFloorSelector {
         super.init(frame: CGRect())
     }
 
-    func onFloorSelectionChanged(newFloor: MPFloorCodable) {
-        let floorIndex = newFloor.floorIndex?.intValue ?? 0
-        MapsIndoorsData.sharedInstance.mapControl?.select(floorIndex: floorIndex)
+    func onFloorSelectionChanged(newFloor: NSNumber) {
+        let floorIndex = newFloor.intValue
+        listenerDelegate.floorSelector(method: .setSelectedFloorByFloorIndex, args: ["floorIndex": newFloor])
     }
 
     func onShow() {
+        if (!hide && building === latestBuilding) {
+            return
+        }
         if let building {
             listenerDelegate.floorSelector(method: .setList, args: [
-                "list": toJSON(building.floors?.values.map{MPFloorCodable(withFloor: $0)})
+                "list": toJSON(building.floors?.values.sorted(by: { (floor1, floor2) -> Bool in
+                    return floor1.floorIndex!.intValue < floor2.floorIndex!.intValue
+                }).map{MPFloorCodable(withFloor: $0)})
             ])
         }
 
         listenerDelegate.floorSelector(method: .show, args: ["show": true, "animated": true])
+        latestBuilding = building
+        hide = false
     }
+    
     func onHide() {
+        if (hide) {
+            return
+        }
         listenerDelegate.floorSelector(method: .show, args: ["show": false, "animated": true])
+        latestBuilding = nil
+        hide = true
     }
 
     func onUserPositionFloorChange(floorIndex: Int) {

@@ -63,7 +63,7 @@ public class DirectionsServiceModule: NSObject {
         directionsVars.excludeWayTypes.removeAll()
     }
     
-    @objc func getRoute(_ originString: String, destinationString: String, id: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    @objc func getRoute(_ originString: String, destinationString: String, stopsString: [String]?, optimize: Bool, id: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         
         guard let directionsVars = directionsVariables[id] else {
             return doReject(reject, message: "directions service not found. Did you call create")
@@ -71,10 +71,16 @@ public class DirectionsServiceModule: NSObject {
         
         var origin: MPPoint? = nil
         var destination: MPPoint? = nil
+        var stops: [MPPoint]? = nil
         
         do {
             origin = try JSONDecoder().decode(MPPoint.self, from: Data(originString.utf8))
             destination = try JSONDecoder().decode(MPPoint.self, from: Data(destinationString.utf8))
+            if (stopsString != nil) {
+                stops = try stopsString!.map({
+                    try JSONDecoder().decode(MPPoint.self, from: Data($0.utf8))
+                })
+            }
         } catch {
             return doReject(reject, message: "Unable to parse origin or destination point")
         }
@@ -85,8 +91,10 @@ public class DirectionsServiceModule: NSObject {
                 query.avoidWayTypes = directionsVars.wayTypes
             }
             
+            query.stopsPoints = stops
+
             if(!directionsVars.excludeWayTypes.isEmpty) {
-                query.avoidWayTypes = directionsVars.excludeWayTypes
+                query.excludeWayTypes = directionsVars.excludeWayTypes
             }
             
             if (directionsVars.date != nil) {
@@ -96,24 +104,28 @@ public class DirectionsServiceModule: NSObject {
                     query.arrival = directionsVars.date
                 }
             }
+
+            query.optimizeRoute = optimize
             
             query.travelMode = directionsVars.travelMode
             
             Task {
-                let route = try await MPMapsIndoors.shared.directionsService.routingWith(query: query)
-                if (route != nil) {
-                    let routeData = try? JSONEncoder().encode(MPRouteCodable(withRoute: route!))
-                    if (routeData != nil) {
-                        let routeRoute = String(data: routeData!, encoding: String.Encoding.utf8)
-                        var map = Dictionary<String, String>()
-                        map["route"] = routeRoute
-                        map["error"] = "null"
-                        resolve(map)
-                    }else {
-                        return doReject(reject, message: "Route could not be parsed")
+                do {
+                    if let route = try await MPMapsIndoors.shared.directionsService.routingWith(query: query) {
+                        if let routeData = try? JSONEncoder().encode(route as? MPRouteInternal) {
+                            let routeRoute = String(data: routeData, encoding: String.Encoding.utf8)
+                            var map = Dictionary<String, String>()
+                            map["route"] = routeRoute
+                            map["error"] = "null"
+                            return resolve(map)
+                        } else {
+                            return doReject(reject, message: "Route could not be parsed")
+                        }
+                    } else {
+                        return resolve(nil)
                     }
-                }else {
-                    return resolve(nil)
+                } catch {
+                    return doReject(reject, message: (error as? MPError)?.description ?? error.localizedDescription)
                 }
             }
         }
