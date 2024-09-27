@@ -165,7 +165,7 @@ RCT_EXTERN_METHOD(requiresMainQueueSetup)
 
     // SetterBridge setLabelMaxWidth->labelMaxWidth
     RCT_EXTERN_METHOD(setLabelMaxWidth: (NSString *) displayRuleId
-                      value:(NSUInteger) value
+                      value:(NSInteger) value
                       resolver:(RCTPromiseResolveBlock) resolve
                       rejecter:(RCTPromiseRejectBlock) reject)
 
