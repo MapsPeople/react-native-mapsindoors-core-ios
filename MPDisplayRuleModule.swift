@@ -437,13 +437,13 @@ public class MPDisplayRuleModule: NSObject {
     }
 
     // Setter setLabelMaxWidth->labelMaxWidth
-    @objc public func setLabelMaxWidth(_ displayRuleId: String, value: UInt, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+    @objc public func setLabelMaxWidth(_ displayRuleId: String, value: Int, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
         if (value != -1) {
-            displayRule.labelMaxWidth = value
+            displayRule.labelMaxWidth = UInt(value)
         }
 
         return resolve(nil)
