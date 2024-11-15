@@ -525,19 +525,21 @@ public class MapControlModule: RCTEventEmitter {
             return doReject(reject, message: "mapControl is not available")
         }
 
-        if (setup) {
-            let delegate = mapsIndoorsData.mapControlListenerDelegate!
-            mapControl.delegate = delegate
+        DispatchQueue.main.async {
+            if (setup) {
+                let delegate = mapsIndoorsData.mapControlListenerDelegate!
+                mapControl.delegate = delegate
 
-            let floorSelector = FloorSelector(delegate: delegate)
-            floorSelector.autoFloorChange = isAutoFloorChangeEnabled
+                let floorSelector = FloorSelector(delegate: delegate)
+                floorSelector.autoFloorChange = isAutoFloorChangeEnabled
 
-            mapControl.floorSelector = floorSelector
-            mapsIndoorsData.floorSelector = floorSelector
+                mapControl.floorSelector = floorSelector
+                mapsIndoorsData.floorSelector = floorSelector
 
-        } else {
-            mapControl.floorSelector = nil
-            mapsIndoorsData.floorSelector = nil
+            } else {
+                mapControl.floorSelector = nil
+                mapsIndoorsData.floorSelector = nil
+            }
         }
 
         return resolve(nil)
