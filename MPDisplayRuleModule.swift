@@ -38,6 +38,52 @@ public class MPDisplayRuleModule: NSObject {
         }
     }
     
+    private func getIconPlacementIntValue(iconPlacement: MPIconPlacement) -> Int {
+        switch(iconPlacement) {
+        case .above:
+            return 1
+        case .below:
+            return 2
+        case .left:
+            return 3
+        case .right:
+            return 4
+        default:
+            return 0
+        }
+    }
+
+
+    private func getLabelPosition(labelPosition: NSNumber) -> MPLabelPosition {
+        switch(labelPosition.intValue) {
+        case 0:
+            return .left
+        case 1:
+            return .bottom
+        case 2:
+            return .top
+        case 3:
+            return .right
+        default:
+            return .bottom
+        }
+    }
+    
+    private func getLabelPositionIntValue(labelPosition: MPLabelPosition) -> Int {
+        switch(labelPosition) {
+        case .left:
+            return 0
+        case .bottom:
+            return 1
+        case .top:
+            return 2
+        case .right:
+            return 3
+        default:
+            return 2
+        }
+    }
+    
     private func getLabelType(labelType: NSNumber) -> MPLabelType {
         switch(labelType.intValue) {
         case 0:
@@ -51,6 +97,19 @@ public class MPDisplayRuleModule: NSObject {
         }
     }
     
+    private func getLabelTypeIntValue(labelType: MPLabelType) -> Int {
+        switch(labelType) {
+        case .flat:
+            return 0
+        case .floating:
+            return 1
+        case .graphic:
+            return 2
+        default:
+            return 1
+        }
+    }
+    
     private func getBadgePosition(badgePosition: NSNumber) -> MPBadgePosition {
         switch(badgePosition.intValue) {
         case 1:
@@ -61,6 +120,19 @@ public class MPDisplayRuleModule: NSObject {
             return .topRight
         default:
             return .bottomLeft
+        }
+    }
+    
+    private func getBadgePositionIntValue(badgePosition: MPBadgePosition) -> Int {
+        switch(badgePosition) {
+        case .bottomRight:
+            return 1
+        case .topLeft:
+            return 2
+        case .topRight:
+            return 3
+        default:
+            return 0
         }
     }
     
@@ -1034,7 +1106,7 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        return resolve(displayRule.badgePosition)
+        return resolve(getBadgePositionIntValue(badgePosition: displayRule.badgePosition ?? MPBadgePosition.bottomLeft))
     }
     
     @objc public func setBadgePosition(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
@@ -1056,7 +1128,7 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        return resolve(displayRule.iconPlacement)
+        return resolve(getIconPlacementIntValue(iconPlacement: displayRule.iconPlacement ?? MPIconPlacement.center))
     }
     
     @objc public func setIconPlacement(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
@@ -1078,7 +1150,7 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        return resolve(displayRule.iconPlacement)
+        return resolve(getLabelTypeIntValue(labelType: displayRule.labelType ?? MPLabelType.floating))
     }
     
     @objc public func setLabelType(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
@@ -1242,6 +1314,26 @@ public class MPDisplayRuleModule: NSObject {
         
         if (value != -1) {
             displayRule.labelStyleBearing = value.doubleValue
+        }
+        
+        return resolve(nil)
+    }
+
+    @objc public func getLabelStylePosition(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+
+        return resolve(getLabelPositionIntValue(labelPosition: displayRule.labelStylePosition))
+    }
+
+    @objc public func setLabelStylePosition(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+        
+        if (value != -1) {
+            displayRule.labelStylePosition = getLabelPosition(labelPosition: value)
         }
         
         return resolve(nil)

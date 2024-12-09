@@ -53,6 +53,9 @@ public class MapControlModule: RCTEventEmitter {
                 return doReject(reject, message: "Unable to initialize Map Control")
             }
             
+            if let showUserPosition = config["showUserPosition"] as? Bool {
+                mapControl.showUserPosition = showUserPosition
+            }
             
             let mapsIndoorsData = MapsIndoorsData.sharedInstance
             

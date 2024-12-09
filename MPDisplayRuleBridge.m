@@ -526,6 +526,15 @@ RCT_EXTERN_METHOD(requiresMainQueueSetup)
                       resolver:(RCTPromiseResolveBlock) resolve
                       rejecter:(RCTPromiseRejectBlock) reject)
 
+    RCT_EXTERN_METHOD(getLabelStylePosition: (NSString *) displayRuleId
+                      resolver:(RCTPromiseResolveBlock) resolve
+                      rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(setLabelStylePosition: (NSString *) displayRuleId
+                        value:(nonnull NSNumber *) value
+                        resolver:(RCTPromiseResolveBlock) resolve
+                        rejecter:(RCTPromiseRejectBlock) reject)
+
     RCT_EXTERN_METHOD(setLabelStyleGraphic: (NSString *) displayRuleId
                       value:(NSString *) value
                       resolver:(RCTPromiseResolveBlock) resolve

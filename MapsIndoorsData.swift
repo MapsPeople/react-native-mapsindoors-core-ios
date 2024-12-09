@@ -78,21 +78,21 @@ class MapControlDelegate: MPMapControlDelegate, LiveDataDelegate, MPFloorSelecto
         if (respondToCameraEvents) {
             sendEvent(event: .cameraEvent, body: ["event": 5])
         }
-        return true;
+        return false;
     }
 
     func cameraIdle() -> Bool {
         if (respondToCameraEvents) {
             sendEvent(event: .cameraEvent, body: ["event": 7])
         }
-        return true;
+        return false;
     }
     
     func cameraWillMove() -> Bool {
         if (respondToCameraEvents) {
             sendEvent(event: .cameraEvent, body: ["event": 5])
         }
-        return true;
+        return false;
     }
     
     func didTap(coordinate: MPPoint) -> Bool {
