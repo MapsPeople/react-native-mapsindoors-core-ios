@@ -85,6 +85,9 @@ public class MapControlModule: RCTEventEmitter {
         do {
             let filter: MPFilter = try fromJSON(filterJSON)
             let filterBehavior: MPFilterBehavior = try fromJSON(filterBehaviorJSON)
+            if filterBehavior.maxZoom == 999 {
+                filterBehavior.maxZoom = Double.nan
+            }
             
             MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.setFilter(filter: filter, behavior: filterBehavior)
             return resolve(true)
@@ -118,6 +121,10 @@ public class MapControlModule: RCTEventEmitter {
             let locations: [String] = try fromJSON(locationIdsJSON)
             let highlightBehavior: MPHighlightBehavior = try fromJSON(highlightBehaviorJSON)
             let locs = (locations.compactMap{MPMapsIndoors.shared.locationWith(locationId: $0)})
+            
+            if (highlightBehavior.maxZoom == 999) {
+                highlightBehavior.maxZoom = Double.nan
+            }
 
             MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.setHighlight(locations: locs, behavior: highlightBehavior)
 
@@ -151,8 +158,7 @@ public class MapControlModule: RCTEventEmitter {
                            entityType: String,
                            resolver resolve: @escaping RCTPromiseResolveBlock,
                            rejecter reject: @escaping RCTPromiseRejectBlock) {
-        var entity: MPEntity
-        
+        var entity: MPEntity? = nil
         do {
             switch entityType {
             case "MPLocation":
@@ -169,7 +175,7 @@ public class MapControlModule: RCTEventEmitter {
             }
             
             DispatchQueue.main.async {
-                MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.goTo(entity: entity)
+                MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.goTo(entity: entity!)
                 return resolve(nil)
             }
         } catch let e {
@@ -237,6 +243,9 @@ public class MapControlModule: RCTEventEmitter {
         do {
             let location: MPLocationCodable = try fromJSON(locationJSON)
             let behavior: MPSelectionBehavior = try fromJSON(behaviorJSON)
+            if (behavior.maxZoom == 999) {
+                behavior.maxZoom = Double.nan
+            }
             
             Task {
                 let loc = MPMapsIndoors.shared.locationWith(locationId: location.locationId)
