@@ -169,4 +169,13 @@ public class UtilsModule: NSObject {
         }
         return resolve(nil)
     }
+
+    @objc public func setAutomatedZoomLimit(_ value: Double, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        if value == -1 {
+            MPMapsIndoors.shared.solution?.config.automatedZoomLimit = nil
+        } else {
+            MPMapsIndoors.shared.solution?.config.automatedZoomLimit = value
+        }
+        return resolve(nil)
+    }
 }

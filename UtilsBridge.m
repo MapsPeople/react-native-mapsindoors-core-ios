@@ -68,4 +68,9 @@
           value: (BOOL) value
           resolver:(RCTPromiseResolveBlock) resolve
           rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(setAutomatedZoomLimit: (double) limit
+          resolver:(RCTPromiseResolveBlock) resolve
+          rejecter:(RCTPromiseRejectBlock) reject)
+
 @end
