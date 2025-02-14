@@ -41,6 +41,7 @@
 
     RCT_EXTERN_METHOD(goTo:(NSString) entityJSON
                       entityType:(NSString) entityType
+                      maxZoom:(nonnull NSNumber) maxZoom
                       resolver:(RCTPromiseResolveBlock) resolve
                       rejecter:(RCTPromiseRejectBlock) reject)
 

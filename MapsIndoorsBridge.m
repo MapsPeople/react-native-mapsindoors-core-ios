@@ -126,4 +126,8 @@ RCT_EXTERN_METHOD(requiresMainQueueSetup)
     RCT_EXTERN_METHOD(getSyncedVenues:(RCTPromiseResolveBlock)resolve
                     rejecter:(RCTPromiseRejectBlock)reject)
 
+    RCT_EXTERN_METHOD(cacheData:(NSString) apiKey
+                  resolver:(RCTPromiseResolveBlock) resolve
+                  rejecter:(RCTPromiseRejectBlock) reject)
+
 @end
