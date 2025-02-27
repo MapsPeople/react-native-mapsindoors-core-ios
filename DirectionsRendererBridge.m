@@ -39,11 +39,6 @@
     RCT_EXTERN_METHOD(setOnLegSelectedListener: (RCTPromiseResolveBlock) resolve
       rejecter:(RCTPromiseRejectBlock) reject)
 
-    RCT_EXTERN_METHOD(setPolyLineColors: (NSString *) foregroundString
-      backgroundString:(NSString *): backgroundString
-      resolver:(RCTPromiseResolveBlock) resolve
-      rejecter:(RCTPromiseRejectBlock) reject)
-
     RCT_EXTERN_METHOD(setRoute: (NSString *) routeString
       stopIcons:(NSString *) stopIcons
       legIndex: (nonnull NSNumber *) legIndex

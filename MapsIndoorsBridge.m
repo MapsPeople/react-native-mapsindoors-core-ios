@@ -1,11 +1,8 @@
 #import <React/RCTBridgeModule.h>
 
 @interface RCT_EXTERN_MODULE(MapsIndoorsModule, NSObject)
-RCT_EXTERN_METHOD(requiresMainQueueSetup)
 
-    RCT_EXTERN_METHOD(addEvent:(NSString *)name
-                      location:(NSString *)location
-                      date:(nonnull NSNumber *)date)
+    RCT_EXTERN_METHOD(requiresMainQueueSetup)
 
     RCT_EXTERN_METHOD(loadMapsIndoors:(NSString *)apiKey
                   optionalStrings:(NSArray<NSString *> _Nullable)optionalStrings
@@ -125,5 +122,9 @@ RCT_EXTERN_METHOD(requiresMainQueueSetup)
 
     RCT_EXTERN_METHOD(getSyncedVenues:(RCTPromiseResolveBlock)resolve
                     rejecter:(RCTPromiseRejectBlock)reject)
+
+    RCT_EXTERN_METHOD(cacheData:(NSString) apiKey
+                  resolver:(RCTPromiseResolveBlock) resolve
+                  rejecter:(RCTPromiseRejectBlock) reject)
 
 @end

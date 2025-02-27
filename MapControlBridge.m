@@ -2,6 +2,7 @@
 #import <React/RCTEventEmitter.h>
 
 @interface RCT_EXTERN_MODULE(MapControlModule, RCTEventEmitter)
+
     RCT_EXTERN_METHOD(requiresMainQueueSetup)
 
     RCT_EXTERN_METHOD(supportedEvents)
@@ -41,6 +42,7 @@
 
     RCT_EXTERN_METHOD(goTo:(NSString) entityJSON
                       entityType:(NSString) entityType
+                      maxZoom:(nonnull NSNumber) maxZoom
                       resolver:(RCTPromiseResolveBlock) resolve
                       rejecter:(RCTPromiseRejectBlock) reject)
 

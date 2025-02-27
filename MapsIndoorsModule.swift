@@ -7,7 +7,8 @@ import React
 
 @objc(MapsIndoorsModule)
 public class MapsIndoorsModule: NSObject {
-    @objc static func requiresMainQueueSetup() -> Bool { return false }
+
+    @objc public static func requiresMainQueueSetup() -> Bool {return false}
 
     @objc public func test() {
         print("%@.test()", String(describing: self));
@@ -323,5 +324,40 @@ public class MapsIndoorsModule: NSObject {
     @objc(getSyncedVenues:rejecter:)
     func getSyncedVenues(resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) -> Void {
         return resolve(MPMapsIndoors.shared.venuesToSync)
+    }
+
+    @objc public func cacheData(_ apiKey: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        let datasetCacheManager = MPMapsIndoors.shared.datasetCacheManager
+        var dataSet = datasetCacheManager.dataSetWithId(apiKey)
+        if dataSet == nil {
+            dataSet = datasetCacheManager.addDataSet(apiKey, cachingScope: .full)
+        }
+        if dataSet == nil {
+            return resolve(false)
+        }
+        
+        
+        datasetCacheManager.delegate = DatasetDelegate(promise: resolve, dataset: dataSet!.cacheItem)
+        
+        datasetCacheManager.synchronizeCacheItems([dataSet!.cacheItem])
+    }
+    
+}
+
+class DatasetDelegate: NSObject, MPDataSetCacheManagerDelegate {
+    var promise: RCTPromiseResolveBlock
+    var dataset: MPDataSetCacheItem
+    
+    init(promise: @escaping RCTPromiseResolveBlock, dataset: MPDataSetCacheItem) {
+        self.promise = promise
+        self.dataset = dataset
+    }
+    
+    func dataSetManager(_ dataSetManager: MPDataSetCacheManager, didFinishSynchronizingItem item: MPDataSetCacheItem) {
+        if item.cachingItemId == dataset.cachingItemId {
+            return promise(true)
+        }else {
+            return promise(false)
+        }
     }
 }

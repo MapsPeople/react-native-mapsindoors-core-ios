@@ -7,7 +7,8 @@ import React
 
 @objc(MapControlModule)
 public class MapControlModule: RCTEventEmitter {
-    @objc override public static func requiresMainQueueSetup() -> Bool {return false}
+    
+    @objc public override static func requiresMainQueueSetup() -> Bool { return false }
 
     enum HexParsingError: Error {
         case invalidHexString(String)
@@ -153,11 +154,13 @@ public class MapControlModule: RCTEventEmitter {
                                           rejecter reject: RCTPromiseRejectBlock) {
         return resolve(MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.showUserPosition)
     }
-    
+
     @objc public func goTo(_ entityJSON: String,
                            entityType: String,
+                           maxZoom: NSNumber?,
                            resolver resolve: @escaping RCTPromiseResolveBlock,
                            rejecter reject: @escaping RCTPromiseRejectBlock) {
+        
         var entity: MPEntity? = nil
         do {
             switch entityType {
@@ -175,7 +178,11 @@ public class MapControlModule: RCTEventEmitter {
             }
             
             DispatchQueue.main.async {
-                MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.goTo(entity: entity!)
+                if maxZoom != -999 {
+                    MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.goTo(entity: entity!, maxZoom: maxZoom!.doubleValue)
+                } else {
+                    MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.goTo(entity: entity!)
+                }
                 return resolve(nil)
             }
         } catch let e {

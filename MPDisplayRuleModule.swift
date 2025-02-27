@@ -21,7 +21,7 @@ private func doReject(_ reject: RCTPromiseRejectBlock, displayRuleId: String,
 @objc(DisplayRule)
 public class MPDisplayRuleModule: NSObject {
 
-    @objc static func requiresMainQueueSetup() -> Bool { return false }
+    @objc public static func requiresMainQueueSetup() -> Bool {return false}
     
     private func getIconPlacement(iconPlacement: NSNumber) -> MPIconPlacement {
         switch(iconPlacement.intValue) {
@@ -505,7 +505,12 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        return resolve(displayRule.labelMaxWidth)
+        let maxWidth = displayRule.labelMaxWidth
+        if maxWidth == UInt.max {
+            return resolve(-1)
+        }else {
+            return resolve(displayRule.labelMaxWidth)
+        }
     }
 
     // Setter setLabelMaxWidth->labelMaxWidth

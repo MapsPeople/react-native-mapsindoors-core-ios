@@ -11,8 +11,9 @@ import MapsIndoorsCore
 
 @objc(UtilsModule)
 public class UtilsModule: NSObject {
-    @objc static func requiresMainQueueSetup() -> Bool { return false }
-    
+
+    @objc public static func requiresMainQueueSetup() -> Bool {return false}
+ 
     @objc public func venueHasGraph(_ venueId: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         Task {
             guard let venue = await MPMapsIndoors.shared.venueWith(id: venueId) else {

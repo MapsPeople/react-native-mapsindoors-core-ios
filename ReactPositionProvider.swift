@@ -14,12 +14,14 @@ public class ReactPositionProvider: MPPositionProvider {
     }
 
     public func setLatestPosition(positionResult: MPPositionResult) {
-        if (latestPosition?.floorIndex != positionResult.floorIndex) {
-            let floorSelector = mapsIndoorsData.floorSelector
-            floorSelector?.onUserPositionFloorChange(floorIndex: positionResult.floorIndex)
-        }
+        DispatchQueue.main.async {
+            if (self.latestPosition?.floorIndex != positionResult.floorIndex) {
+                let floorSelector = self.mapsIndoorsData.floorSelector
+                floorSelector?.onUserPositionFloorChange(floorIndex: positionResult.floorIndex)
+            }
 
-        delegate?.onPositionUpdate(position: positionResult)
-        latestPosition = positionResult
+            self.delegate?.onPositionUpdate(position: positionResult)
+            self.latestPosition = positionResult
+        }
     }
 }
