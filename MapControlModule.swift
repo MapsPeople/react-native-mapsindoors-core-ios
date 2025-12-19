@@ -7,7 +7,8 @@ import React
 
 @objc(MapControlModule)
 public class MapControlModule: RCTEventEmitter {
-    @objc override public static func requiresMainQueueSetup() -> Bool {return false}
+    
+    @objc public override static func requiresMainQueueSetup() -> Bool { return false }
 
     enum HexParsingError: Error {
         case invalidHexString(String)
@@ -153,11 +154,13 @@ public class MapControlModule: RCTEventEmitter {
                                           rejecter reject: RCTPromiseRejectBlock) {
         return resolve(MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.showUserPosition)
     }
-    
+
     @objc public func goTo(_ entityJSON: String,
                            entityType: String,
+                           maxZoom: NSNumber?,
                            resolver resolve: @escaping RCTPromiseResolveBlock,
                            rejecter reject: @escaping RCTPromiseRejectBlock) {
+        
         var entity: MPEntity? = nil
         do {
             switch entityType {
@@ -168,14 +171,17 @@ public class MapControlModule: RCTEventEmitter {
             case "MPVenue":
                 entity = try fromJSON(entityJSON, type: MPVenueCodable.self)
             case "MPFloor":
-                // TODO: Not implemented, currently MPFloor is not an MPEntity
-                return doReject(reject, message: "goTo: Not currently implemented for \(entityType) on iOS")
+                entity = try fromJSON(entityJSON, type: MPFloorCodable.self)
             default:
                 return doReject(reject, message: "goTo: Unknown entity type \(entityType)")
             }
             
             DispatchQueue.main.async {
-                MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.goTo(entity: entity!)
+                if maxZoom != -999 {
+                    MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.goTo(entity: entity!, maxZoom: maxZoom!.doubleValue)
+                } else {
+                    MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.goTo(entity: entity!)
+                }
                 return resolve(nil)
             }
         } catch let e {
@@ -389,10 +395,12 @@ public class MapControlModule: RCTEventEmitter {
     }
     
     @objc public func hideFloorSelector(_ hide: Bool,
-                                        resolver resolve: RCTPromiseResolveBlock,
+                                        resolver resolve: @escaping RCTPromiseResolveBlock,
                                         rejecter reject: RCTPromiseRejectBlock) {
-        MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.hideFloorSelector = hide
-        return resolve(nil)
+        DispatchQueue.main.async {
+            MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.hideFloorSelector = hide
+            return resolve(nil)
+        }
     }
     
     @objc public func animateCamera(_ updateJSON: String,

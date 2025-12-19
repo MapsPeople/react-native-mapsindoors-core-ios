@@ -9,8 +9,6 @@
 
 @interface RCT_EXTERN_MODULE(DirectionsService, NSObject)
 
-    RCT_EXTERN_METHOD(requiresMainQueueSetup)
-
     RCT_EXTERN_METHOD(create: (RCTPromiseResolveBlock) resolve
       rejecter:(RCTPromiseRejectBlock) reject)
 

@@ -10,8 +10,6 @@
 
 @interface RCT_EXTERN_MODULE(DirectionsRenderer, RCTEventEmitter)
 
-    RCT_EXTERN_METHOD(requiresMainQueueSetup)
-
     RCT_EXTERN_METHOD(clear: (RCTPromiseResolveBlock) resolve
       rejecter:(RCTPromiseRejectBlock) reject)
 
@@ -37,11 +35,6 @@
       rejecter:(RCTPromiseRejectBlock) reject)
 
     RCT_EXTERN_METHOD(setOnLegSelectedListener: (RCTPromiseResolveBlock) resolve
-      rejecter:(RCTPromiseRejectBlock) reject)
-
-    RCT_EXTERN_METHOD(setPolyLineColors: (NSString *) foregroundString
-      backgroundString:(NSString *): backgroundString
-      resolver:(RCTPromiseResolveBlock) resolve
       rejecter:(RCTPromiseRejectBlock) reject)
 
     RCT_EXTERN_METHOD(setRoute: (NSString *) routeString
