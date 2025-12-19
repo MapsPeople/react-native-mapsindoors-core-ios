@@ -8,9 +8,6 @@
 #import <React/RCTBridgeModule.h>
 
 @interface RCT_EXTERN_MODULE(UtilsModule, NSObject)
-
-    RCT_EXTERN_METHOD(requiresMainQueueSetup)
-
     RCT_EXTERN_METHOD(venueHasGraph: (NSString *) venueId
           resolver:(RCTPromiseResolveBlock) resolve
           rejecter:(RCTPromiseRejectBlock) reject)

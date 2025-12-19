@@ -62,6 +62,8 @@ class MapControlDelegate: MPMapControlDelegate, LiveDataDelegate, MPFloorSelecto
     var respondToDidTapInfoWindow: Bool = false
     
     var respondToCameraEvents: Bool = false
+    
+    var zoom: Float = 0.0
 
     init(eventEmitter: RCTEventEmitter) {
         self.eventEmitter = eventEmitter
@@ -72,12 +74,26 @@ class MapControlDelegate: MPMapControlDelegate, LiveDataDelegate, MPFloorSelecto
         eventEmitter.sendEvent(withName: event.rawValue, body: body)
     }
 
+    func isCloseToWholeNumber(_ number: Float, tolerance: Float = 0.02) -> Bool {
+        let rounded = round(number)
+        return abs(number - rounded) < tolerance
+    }
+    
     // MPMapControlDelegate:
     
     func didChangeCameraPosition() -> Bool {
         if (respondToCameraEvents) {
             sendEvent(event: .cameraEvent, body: ["event": 5])
         }
+        
+        if let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() {
+            let z = mapControl.mapsIndoorsZoom
+            if z != zoom && (z.isLess(than: zoom-0.02) || zoom.isLess(than: z-0.02) || self.isCloseToWholeNumber(z, tolerance: 0.02)) {
+                zoom = z
+                MapsIndoorsData.sharedInstance.floorSelector?.onZoomChanged(zoom: zoom)
+            }
+        }
+        
         return false;
     }
 
@@ -184,7 +200,7 @@ class FloorSelector: UIView, MPCustomFloorSelector {
         // TODO: the rest are not implemented since they are not available from the MPCustomFloorSelector protocol, and are not implemented in flutter
 //        case setSelectedFloor
         case setSelectedFloorByFloorIndex
-//        case zoomLevelChanged
+        case zoomLevelChanged
     }
     
     lazy var allEvents: [String] = {
@@ -192,7 +208,11 @@ class FloorSelector: UIView, MPCustomFloorSelector {
         return allEventNames
     }()
 
-    var building: MapsIndoors.MPBuilding?
+    var building: MapsIndoors.MPBuilding? {
+        didSet {
+            if (oldValue?.buildingId != building?.buildingId) { onShow() }
+        }
+    }
     var latestBuilding: MapsIndoors.MPBuilding?
     var delegate: MapsIndoors.MPFloorSelectorDelegate?
 
@@ -204,51 +224,65 @@ class FloorSelector: UIView, MPCustomFloorSelector {
     var listenerDelegate: MapControlDelegate
 
     init(delegate: MPFloorSelectorDelegate) {
-        listenerDelegate = MapsIndoorsData.sharedInstance.mapControlListenerDelegate!
+        self.listenerDelegate = MapsIndoorsData.sharedInstance.mapControlListenerDelegate!
 
         super.init(frame: CGRect())
         self.delegate = delegate
     }
 
     required init?(coder: NSCoder) {
-        listenerDelegate = MapsIndoorsData.sharedInstance.mapControlListenerDelegate!
+        self.listenerDelegate = MapsIndoorsData.sharedInstance.mapControlListenerDelegate!
 
         super.init(frame: CGRect())
     }
 
     func onFloorSelectionChanged(newFloor: NSNumber) {
-        let floorIndex = newFloor.intValue
-        listenerDelegate.floorSelector(method: .setSelectedFloorByFloorIndex, args: ["floorIndex": newFloor])
+        DispatchQueue.main.async {
+            let floorIndex = newFloor.intValue
+            self.listenerDelegate.floorSelector(method: .setSelectedFloorByFloorIndex, args: ["floorIndex": newFloor])
+        }
     }
 
     func onShow() {
-        if (!hide && building === latestBuilding) {
-            return
-        }
-        if let building {
-            listenerDelegate.floorSelector(method: .setList, args: [
-                "list": toJSON(building.floors?.values.sorted(by: { (floor1, floor2) -> Bool in
-                    return floor1.floorIndex!.intValue < floor2.floorIndex!.intValue
-                }).map{MPFloorCodable(withFloor: $0)})
-            ])
-        }
+        DispatchQueue.main.async {
+            if (!self.hide && self.building == nil && self.building === self.latestBuilding) {
+                return
+            }
+            if let building = self.building {
+                self.listenerDelegate.floorSelector(method: .setList, args: [
+                    "list": toJSON(building.floors?.values.sorted(by: { (floor1, floor2) -> Bool in
+                        return floor1.floorIndex!.intValue < floor2.floorIndex!.intValue
+                    }).map{MPFloorCodable(withFloor: $0)})
+                ])
+            }
 
-        listenerDelegate.floorSelector(method: .show, args: ["show": true, "animated": true])
-        latestBuilding = building
-        hide = false
+            self.listenerDelegate.floorSelector(method: .show, args: ["show": true, "animated": true])
+            self.latestBuilding = self.building
+            self.hide = false
+        }
     }
     
     func onHide() {
-        if (hide) {
-            return
+        DispatchQueue.main.async {
+            if (self.hide) {
+                return
+            }
+            self.listenerDelegate.floorSelector(method: .show, args: ["show": false, "animated": true])
+            self.latestBuilding = nil
+            self.hide = true
         }
-        listenerDelegate.floorSelector(method: .show, args: ["show": false, "animated": true])
-        latestBuilding = nil
-        hide = true
     }
 
     func onUserPositionFloorChange(floorIndex: Int) {
-        listenerDelegate.floorSelector(method: .setUserPositionFloor, args: ["floor": floorIndex])
+        DispatchQueue.main.async {
+            self.listenerDelegate.floorSelector(method: .setUserPositionFloor, args: ["floor": floorIndex])
+        }
+    }
+    
+    func onZoomChanged(zoom: Float) {
+        DispatchQueue.main.async {
+            self.listenerDelegate.floorSelector(method: .zoomLevelChanged, args: ["zoom": Double(zoom)])
+        }
     }
 
 }

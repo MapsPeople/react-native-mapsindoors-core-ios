@@ -13,7 +13,7 @@ import MapsIndoorsCodable
 public class DirectionsServiceModule: NSObject {
     
     var directionsVariables = [String: DirectionsVariables]()
-    
+
     @objc static func requiresMainQueueSetup() -> Bool { return false }
     
     @objc func create(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {

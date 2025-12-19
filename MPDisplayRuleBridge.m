@@ -1,9 +1,8 @@
 #import <React/RCTBridgeModule.h>
 
 @interface RCT_EXTERN_MODULE(DisplayRule, NSObject)
-RCT_EXTERN_METHOD(requiresMainQueueSetup)
 // End of head
-
+    
     // GetterBridge isVisible->visible
     RCT_EXTERN_METHOD(isVisible: (NSString *) displayRuleId
                       resolver:(RCTPromiseResolveBlock) resolve
@@ -165,7 +164,7 @@ RCT_EXTERN_METHOD(requiresMainQueueSetup)
 
     // SetterBridge setLabelMaxWidth->labelMaxWidth
     RCT_EXTERN_METHOD(setLabelMaxWidth: (NSString *) displayRuleId
-                      value:(NSInteger) value
+                      value:(NSUInteger) value
                       resolver:(RCTPromiseResolveBlock) resolve
                       rejecter:(RCTPromiseRejectBlock) reject)
 
