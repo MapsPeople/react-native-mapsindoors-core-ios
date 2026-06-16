@@ -1,30 +1,31 @@
 import Foundation
-
 import MapsIndoors
 import MapsIndoorsCore
 
 public struct IconSizeStruct: Codable {
     public var width: Int
     public var height: Int
-}; extension IconSizeStruct { // Don't want to lose default initializer, so this must be in an extension
+}
+extension IconSizeStruct {  // Don't want to lose default initializer, so this must be in an extension
     public init(withCGSize: CGSize) {
         height = Int(withCGSize.height)
         width = Int(withCGSize.width)
     }
 }
 
-private func doReject(_ reject: RCTPromiseRejectBlock, displayRuleId: String,
-                      _file: String = #fileID, _func: String = #function, _line: Int = #line, _col: Int = #column) {
+private func doReject(
+    _ reject: RCTPromiseRejectBlock, displayRuleId: String,
+    _file: String = #fileID, _func: String = #function, _line: Int = #line, _col: Int = #column
+) {
     return doReject(reject, message: "The DisplayRule (id: \"\(displayRuleId)\") cannot be found", _file: _file, _func: _func, _line: _line, _col: _col)
 }
 
 @objc(DisplayRule)
 public class MPDisplayRuleModule: NSObject {
+    @objc public static func requiresMainQueueSetup() -> Bool { return false }
 
-    @objc public static func requiresMainQueueSetup() -> Bool {return false}
-    
     private func getIconPlacement(iconPlacement: NSNumber) -> MPIconPlacement {
-        switch(iconPlacement.intValue) {
+        switch iconPlacement.intValue {
         case 1:
             return .above
         case 2:
@@ -37,9 +38,9 @@ public class MPDisplayRuleModule: NSObject {
             return .center
         }
     }
-    
+
     private func getIconPlacementIntValue(iconPlacement: MPIconPlacement) -> Int {
-        switch(iconPlacement) {
+        switch iconPlacement {
         case .above:
             return 1
         case .below:
@@ -53,9 +54,8 @@ public class MPDisplayRuleModule: NSObject {
         }
     }
 
-
     private func getLabelPosition(labelPosition: NSNumber) -> MPLabelPosition {
-        switch(labelPosition.intValue) {
+        switch labelPosition.intValue {
         case 0:
             return .left
         case 1:
@@ -68,9 +68,9 @@ public class MPDisplayRuleModule: NSObject {
             return .bottom
         }
     }
-    
+
     private func getLabelPositionIntValue(labelPosition: MPLabelPosition) -> Int {
-        switch(labelPosition) {
+        switch labelPosition {
         case .left:
             return 0
         case .bottom:
@@ -83,9 +83,9 @@ public class MPDisplayRuleModule: NSObject {
             return 2
         }
     }
-    
+
     private func getLabelType(labelType: NSNumber) -> MPLabelType {
-        switch(labelType.intValue) {
+        switch labelType.intValue {
         case 0:
             return .flat
         case 1:
@@ -96,9 +96,9 @@ public class MPDisplayRuleModule: NSObject {
             return .floating
         }
     }
-    
+
     private func getLabelTypeIntValue(labelType: MPLabelType) -> Int {
-        switch(labelType) {
+        switch labelType {
         case .flat:
             return 0
         case .floating:
@@ -109,9 +109,9 @@ public class MPDisplayRuleModule: NSObject {
             return 1
         }
     }
-    
+
     private func getBadgePosition(badgePosition: NSNumber) -> MPBadgePosition {
-        switch(badgePosition.intValue) {
+        switch badgePosition.intValue {
         case 1:
             return .bottomRight
         case 2:
@@ -122,9 +122,9 @@ public class MPDisplayRuleModule: NSObject {
             return .bottomLeft
         }
     }
-    
+
     private func getBadgePositionIntValue(badgePosition: MPBadgePosition) -> Int {
-        switch(badgePosition) {
+        switch badgePosition {
         case .bottomRight:
             return 1
         case .topLeft:
@@ -135,11 +135,11 @@ public class MPDisplayRuleModule: NSObject {
             return 0
         }
     }
-    
+
     private func getTypeRule(typeName: String) -> MPDisplayRuleType? {
-    // TODO: very similar to FLutter code, maybe combine shared functions somewhere
-        switch (typeName) {
-        case "buildingOutline": // TODO: OutLine?
+        // TODO: very similar to FLutter code, maybe combine shared functions somewhere
+        switch typeName {
+        case "buildingOutline":  // TODO: OutLine?
             return .buildingOutline
         case "selectionHighlight":
             return .selectionHighlight
@@ -161,10 +161,10 @@ public class MPDisplayRuleModule: NSObject {
     private func getRule(name: String) -> MPDisplayRule? {
         if let typeRule = getTypeRule(typeName: name) {
             return MPMapsIndoors.shared.displayRuleFor(displayRuleType: typeRule)
-        } else if let namedRule = MPMapsIndoors.shared.displayRuleFor(type: name.lowercased()){
+        } else if let namedRule = MPMapsIndoors.shared.displayRuleFor(type: name.lowercased()) {
             return namedRule
         } else if let loc = MPMapsIndoors.shared.locationWith(locationId: name) {
-            return MPMapsIndoors.shared.displayRuleFor(location: loc)!
+            return MPMapsIndoors.shared.displayRuleFor(location: loc)
         } else {
             return nil
         }
@@ -188,7 +188,7 @@ public class MPDisplayRuleModule: NSObject {
         let regex = try! NSRegularExpression(pattern: "^#[0-9A-Fa-f]{6}$|^#[0-9A-Fa-f]{8}$")
         let range = NSRange(location: 0, length: hex.utf16.count)
 
-        if (regex.matches(in: hex, range: range).count == 1) {
+        if regex.matches(in: hex, range: range).count == 1 {
             return UIColor(hex: hex)!
         } else {
             throw HexParsingError.invalidHexString(hex)
@@ -205,7 +205,7 @@ public class MPDisplayRuleModule: NSObject {
         return toJSON(iconSize)
     }
 
-// End of head
+    // End of head
 
     // Getter isVisible->visible
     @objc public func isVisible(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
@@ -361,11 +361,11 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
-        if (value != -1) {
+
+        if value != -1 {
             displayRule.zoomFrom = value
         }
-        
+
         return resolve(nil)
     }
 
@@ -384,10 +384,10 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.zoomTo = value
         }
-        
+
         return resolve(nil)
     }
 
@@ -470,7 +470,7 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.labelZoomFrom = value
         }
 
@@ -492,7 +492,7 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.labelZoomTo = value
         }
 
@@ -508,7 +508,7 @@ public class MPDisplayRuleModule: NSObject {
         let maxWidth = displayRule.labelMaxWidth
         if maxWidth == UInt.max {
             return resolve(-1)
-        }else {
+        } else {
             return resolve(displayRule.labelMaxWidth)
         }
     }
@@ -519,7 +519,7 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.labelMaxWidth = UInt(value)
         }
 
@@ -541,7 +541,7 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.polygonZoomFrom = value
         }
 
@@ -563,10 +563,10 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if(value != -1) {
+        if value != -1 {
             displayRule.polygonZoomTo = value
         }
-        
+
         return resolve(nil)
     }
 
@@ -584,8 +584,8 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
-        if(value != -1) {
+
+        if value != -1 {
             displayRule.polygonStrokeWidth = value
         }
 
@@ -597,7 +597,7 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         guard let color = displayRule.polygonStrokeColor else {
             return resolve(nil)
         }
@@ -635,9 +635,9 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.polygonStrokeOpacity = value
-        }else {
+        } else {
             displayRule.polygonStrokeOpacity = nil
         }
 
@@ -649,7 +649,7 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         guard let color = displayRule.polygonFillColor else {
             return resolve(nil)
         }
@@ -687,9 +687,9 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if(value != -1) {
+        if value != -1 {
             displayRule.polygonFillOpacity = value
-        }else {
+        } else {
             displayRule.polygonFillOpacity = nil
         }
 
@@ -701,7 +701,7 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         guard let color = displayRule.wallsColor else {
             return resolve(nil)
         }
@@ -739,7 +739,7 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.wallsHeight = value
         }
 
@@ -761,7 +761,7 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.wallsZoomFrom = value
         }
 
@@ -783,7 +783,7 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.wallsZoomTo = value
         }
 
@@ -795,7 +795,7 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         guard let color = displayRule.extrusionColor else {
             return resolve(nil)
         }
@@ -833,7 +833,7 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.extrusionHeight = value
         }
 
@@ -855,7 +855,7 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.extrusionZoomFrom = value
         }
 
@@ -877,7 +877,7 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.extrusionZoomTo = value
         }
 
@@ -899,7 +899,7 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.model2DZoomFrom = value
         }
 
@@ -921,7 +921,7 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.model2DZoomTo = value
         }
 
@@ -943,7 +943,7 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.model2DWidthMeters = value
         }
 
@@ -965,7 +965,7 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.model2DHeightMeters = value
         }
 
@@ -987,7 +987,7 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.model2DBearing = value
         }
 
@@ -1013,19 +1013,19 @@ public class MPDisplayRuleModule: NSObject {
 
         return resolve(nil)
     }
-    
+
     @objc public func getBadgeFillColor(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         guard let color = displayRule.badgeFillColor else {
             return resolve(nil)
         }
 
         return resolve(hexStringFromColor(color: color))
     }
-    
+
     @objc public func setBadgeFillColor(_ displayRuleId: String, value: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
@@ -1035,23 +1035,22 @@ public class MPDisplayRuleModule: NSObject {
         } catch let e {
             return doReject(reject, error: e)
         }
-        
-        
+
         return resolve(nil)
     }
-    
+
     @objc public func getBadgeStrokeColor(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         guard let color = displayRule.badgeStrokeColor else {
             return resolve(nil)
         }
 
         return resolve(hexStringFromColor(color: color))
     }
-    
+
     @objc public func setBadgeStrokeColor(_ displayRuleId: String, value: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
@@ -1059,13 +1058,13 @@ public class MPDisplayRuleModule: NSObject {
 
         do {
             displayRule.badgeStrokeColor = try colorFromHexString(hex: value)
-        }catch let e {
-           return doReject(reject, error: e)
+        } catch let e {
+            return doReject(reject, error: e)
         }
-        
+
         return resolve(nil)
     }
-    
+
     @objc public func getBadgeRadius(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
@@ -1073,19 +1072,19 @@ public class MPDisplayRuleModule: NSObject {
 
         return resolve(displayRule.badgeRadius)
     }
-    
+
     @objc public func setBadgeRadius(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.badgeRadius = value.intValue
         }
-        
+
         return resolve(nil)
     }
-    
+
     @objc public func getBadgeStrokeWidth(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
@@ -1093,19 +1092,19 @@ public class MPDisplayRuleModule: NSObject {
 
         return resolve(displayRule.badgeStrokeWidth)
     }
-    
+
     @objc public func setBadgeStrokeWidth(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.badgeStrokeWidth = value.doubleValue
         }
-        
+
         return resolve(nil)
     }
-    
+
     @objc public func getBadgePosition(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
@@ -1113,21 +1112,21 @@ public class MPDisplayRuleModule: NSObject {
 
         return resolve(getBadgePositionIntValue(badgePosition: displayRule.badgePosition ?? MPBadgePosition.bottomLeft))
     }
-    
+
     @objc public func setBadgePosition(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.badgePosition = getBadgePosition(badgePosition: value)
-        }else {
+        } else {
             displayRule.badgePosition = nil
         }
-        
+
         return resolve(nil)
     }
-    
+
     @objc public func getIconPlacement(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
@@ -1135,21 +1134,21 @@ public class MPDisplayRuleModule: NSObject {
 
         return resolve(getIconPlacementIntValue(iconPlacement: displayRule.iconPlacement ?? MPIconPlacement.center))
     }
-    
+
     @objc public func setIconPlacement(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
-        if (value != -1) {
+
+        if value != -1 {
             displayRule.iconPlacement = getIconPlacement(iconPlacement: value)
-        }else {
+        } else {
             displayRule.iconPlacement = nil
         }
-        
+
         return resolve(nil)
     }
-    
+
     @objc public func getLabelType(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
@@ -1157,21 +1156,21 @@ public class MPDisplayRuleModule: NSObject {
 
         return resolve(getLabelTypeIntValue(labelType: displayRule.labelType ?? MPLabelType.floating))
     }
-    
+
     @objc public func setLabelType(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
-        if (value != -1) {
+
+        if value != -1 {
             displayRule.labelType = getLabelType(labelType: value)
-        }else {
+        } else {
             displayRule.labelType = nil
         }
-        
+
         return resolve(nil)
     }
-    
+
     @objc public func getLabelStyleTextSize(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
@@ -1179,31 +1178,31 @@ public class MPDisplayRuleModule: NSObject {
 
         return resolve(displayRule.labelStyleTextSize)
     }
-    
+
     @objc public func setLabelStyleTextSize(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.labelStyleTextSize = value.intValue
         }
-        
+
         return resolve(nil)
     }
-    
+
     @objc public func getLabelStyleTextColor(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         guard let color = displayRule.labelStyleTextColor else {
             return resolve(nil)
         }
 
         return resolve(hexStringFromColor(color: color))
     }
-    
+
     @objc public func setLabelStyleTextColor(_ displayRuleId: String, value: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
@@ -1214,27 +1213,27 @@ public class MPDisplayRuleModule: NSObject {
         } catch let e {
             return doReject(reject, error: e)
         }
-        
+
         return resolve(nil)
     }
-    
+
     @objc public func getLabelStyleHaloColor(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         guard let color = displayRule.labelStyleHaloColor else {
             return resolve(nil)
         }
 
         return resolve(hexStringFromColor(color: color))
     }
-    
+
     @objc public func setLabelStyleHaloColor(_ displayRuleId: String, value: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         do {
             displayRule.labelStyleHaloColor = try colorFromHexString(hex: value)
         } catch let e {
@@ -1243,7 +1242,7 @@ public class MPDisplayRuleModule: NSObject {
 
         return resolve(nil)
     }
-    
+
     @objc public func getLabelStyleTextOpacity(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
@@ -1251,19 +1250,19 @@ public class MPDisplayRuleModule: NSObject {
 
         return resolve(displayRule.labelStyleTextOpacity)
     }
-    
+
     @objc public func setLabelStyleTextOpacity(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
-        if (value != -1) {
+
+        if value != -1 {
             displayRule.labelStyleTextOpacity = value.doubleValue
         }
-        
+
         return resolve(nil)
     }
-    
+
     @objc public func getLabelStyleHaloWidth(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
@@ -1271,19 +1270,19 @@ public class MPDisplayRuleModule: NSObject {
 
         return resolve(displayRule.labelStyleHaloWidth)
     }
-    
+
     @objc public func setLabelStyleHaloWidth(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
-        if (value != -1) {
+
+        if value != -1 {
             displayRule.labelStyleHaloWidth = value.intValue
         }
-        
+
         return resolve(nil)
     }
-    
+
     @objc public func getLabelStyleHaloBlur(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
@@ -1291,19 +1290,19 @@ public class MPDisplayRuleModule: NSObject {
 
         return resolve(displayRule.labelStyleHaloBlur)
     }
-    
+
     @objc public func setLabelStyleHaloBlur(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
-        if (value != -1) {
+
+        if value != -1 {
             displayRule.labelStyleHaloBlur = value.intValue
         }
-        
+
         return resolve(nil)
     }
-    
+
     @objc public func getLabelStyleBearing(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
@@ -1311,16 +1310,16 @@ public class MPDisplayRuleModule: NSObject {
 
         return resolve(displayRule.labelStyleBearing)
     }
-    
+
     @objc public func setLabelStyleBearing(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
-        if (value != -1) {
+
+        if value != -1 {
             displayRule.labelStyleBearing = value.doubleValue
         }
-        
+
         return resolve(nil)
     }
 
@@ -1336,11 +1335,11 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
-        if (value != -1) {
+
+        if value != -1 {
             displayRule.labelStylePosition = getLabelPosition(labelPosition: value)
         }
-        
+
         return resolve(nil)
     }
 
@@ -1348,16 +1347,16 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         guard let labelGraphic = try? JSONDecoder().decode(LabelGraphic.self, from: value.data(using: .utf8)!) else {
             return doReject(reject, message: "Could not parse label graphic")
         }
-        
+
         displayRule.labelStyleGraphicBackgroundImage = labelGraphic.backgroundImage
         displayRule.labelStyleGraphicStretchX = labelGraphic.stretchX
         displayRule.labelStyleGraphicStretchY = labelGraphic.stretchY
         displayRule.labelStyleGraphicContent = labelGraphic.content
-        
+
         return resolve(nil)
     }
 
@@ -1365,36 +1364,36 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         let labelGraphic = LabelGraphic(backgroundImage: displayRule.labelStyleGraphicBackgroundImage, stretchX: displayRule.labelStyleGraphicStretchX, stretchY: displayRule.labelStyleGraphicStretchY, content: displayRule.labelStyleGraphicContent)
-        
+
         guard let graphicJson = try? JSONEncoder().encode(labelGraphic) else {
             return doReject(reject, message: "Could not encode label graphic")
         }
-        
+
         return resolve(String(data: graphicJson, encoding: String.Encoding.utf8))
     }
-    
+
     @objc public func getPolygonLightnessFactor(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         return resolve(displayRule.polygonLightnessFactor)
     }
-    
+
     @objc public func setPolygonLightnessFactor(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
-        if (value != -2) {
+
+        if value != -2 {
             displayRule.polygonLightnessFactor = value.doubleValue
         }
-        
+
         return resolve(nil)
     }
-    
+
     @objc public func getWallLightnessFactor(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
@@ -1402,19 +1401,19 @@ public class MPDisplayRuleModule: NSObject {
 
         return resolve(displayRule.wallsLightnessFactor)
     }
-    
+
     @objc public func setWallLightnessFactor(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
-        if (value != -2) {
+
+        if value != -2 {
             displayRule.wallsLightnessFactor = value.doubleValue
         }
-        
+
         return resolve(nil)
     }
-    
+
     @objc public func getExtrusionLightnessFactor(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
@@ -1422,19 +1421,19 @@ public class MPDisplayRuleModule: NSObject {
 
         return resolve(displayRule.extrusionLightnessFactor)
     }
-    
+
     @objc public func setExtrusionLightnessFactor(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
-        if (value != -2) {
+
+        if value != -2 {
             displayRule.extrusionLightnessFactor = value.doubleValue
         }
-        
+
         return resolve(nil)
     }
-    
+
     @objc public func getIconScale(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
@@ -1442,19 +1441,19 @@ public class MPDisplayRuleModule: NSObject {
 
         return resolve(displayRule.iconScale)
     }
-    
+
     @objc public func setIconScale(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
-        if (value != -1) {
+
+        if value != -1 {
             displayRule.iconScale = value.doubleValue
         }
-        
+
         return resolve(nil)
     }
-    
+
     @objc public func getBadgeScale(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
@@ -1462,16 +1461,16 @@ public class MPDisplayRuleModule: NSObject {
 
         return resolve(displayRule.badgeScale)
     }
-    
+
     @objc public func setBadgeScale(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
-        if (value != -1) {
+
+        if value != -1 {
             displayRule.badgeScale = value.doubleValue
         }
-        
+
         return resolve(nil)
     }
 
@@ -1482,19 +1481,19 @@ public class MPDisplayRuleModule: NSObject {
 
         return resolve(displayRule.badgeZoomFrom)
     }
-    
+
     @objc public func setBadgeZoomFrom(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
-        if (value != -1) {
+
+        if value != -1 {
             displayRule.badgeZoomFrom = value.doubleValue
         }
-        
+
         return resolve(nil)
     }
-    
+
     @objc public func getBadgeZoomTo(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
@@ -1502,19 +1501,19 @@ public class MPDisplayRuleModule: NSObject {
 
         return resolve(displayRule.badgeZoomTo)
     }
-    
+
     @objc public func setBadgeZoomTo(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
-        if (value != -1) {
+
+        if value != -1 {
             displayRule.badgeZoomTo = value.doubleValue
         }
-        
+
         return resolve(nil)
     }
-    
+
     @objc public func isBadgeVisible(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
@@ -1522,14 +1521,14 @@ public class MPDisplayRuleModule: NSObject {
 
         return resolve(displayRule.badgeVisible)
     }
-    
+
     @objc public func setBadgeVisible(_ displayRuleId: String, value: Bool, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         displayRule.badgeVisible = value
-        
+
         return resolve(nil)
     }
 
@@ -1537,7 +1536,7 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         return resolve(displayRule.model3DModel)
     }
 
@@ -1545,9 +1544,9 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         displayRule.model3DModel = value
-        
+
         return resolve(nil)
     }
 
@@ -1555,7 +1554,7 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         return resolve(displayRule.model3DRotationX)
     }
 
@@ -1563,11 +1562,11 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
-        if (value != -1) {
+
+        if value != -1 {
             displayRule.model3DRotationX = value.doubleValue
         }
-        
+
         return resolve(nil)
     }
 
@@ -1575,7 +1574,7 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         return resolve(displayRule.model3DRotationY)
     }
 
@@ -1583,11 +1582,11 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
-        if (value != -1) {
+
+        if value != -1 {
             displayRule.model3DRotationY = value.doubleValue
         }
-        
+
         return resolve(nil)
     }
 
@@ -1595,7 +1594,7 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         return resolve(displayRule.model3DRotationZ)
     }
 
@@ -1603,11 +1602,11 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
-        if (value != -1) {
+
+        if value != -1 {
             displayRule.model3DRotationZ = value.doubleValue
         }
-        
+
         return resolve(nil)
     }
 
@@ -1615,7 +1614,7 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         return resolve(displayRule.model3DVisible)
     }
 
@@ -1623,9 +1622,9 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         displayRule.model3DVisible = value
-        
+
         return resolve(nil)
     }
 
@@ -1633,7 +1632,7 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         return resolve(displayRule.model3DZoomFrom)
     }
 
@@ -1641,11 +1640,11 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
-        if (value != -1) {
+
+        if value != -1 {
             displayRule.model3DZoomFrom = value.doubleValue
         }
-        
+
         return resolve(nil)
     }
 
@@ -1653,7 +1652,7 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         return resolve(displayRule.model3DZoomTo)
     }
 
@@ -1661,11 +1660,11 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
-        if (value != -1) {
+
+        if value != -1 {
             displayRule.model3DZoomTo = value.doubleValue
         }
-        
+
         return resolve(nil)
     }
 
@@ -1673,7 +1672,7 @@ public class MPDisplayRuleModule: NSObject {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
-        
+
         return resolve(displayRule.model3DScale)
     }
 
@@ -1682,16 +1681,16 @@ public class MPDisplayRuleModule: NSObject {
             return doReject(reject, displayRuleId: displayRuleId)
         }
 
-        if (value != -1) {
+        if value != -1 {
             displayRule.model3DScale = value.doubleValue
         }
-        
+
         return resolve(nil)
     }
 
-// Start of tail
+    // Start of tail
 
-    @objc public func reset(_ displayRuleId: String,resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+    @objc public func reset(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)
         }
@@ -1700,5 +1699,4 @@ public class MPDisplayRuleModule: NSObject {
 
         return resolve(nil)
     }
-
 }

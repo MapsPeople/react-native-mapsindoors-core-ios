@@ -1,28 +1,26 @@
 import Foundation
 import MapsIndoors
-import MapsIndoorsCore
 import MapsIndoorsCodable
-
+import MapsIndoorsCore
 import React
 
 @objc(MapsIndoorsModule)
 public class MapsIndoorsModule: NSObject {
-
-    @objc public static func requiresMainQueueSetup() -> Bool {return false}
+    @objc public static func requiresMainQueueSetup() -> Bool { return false }
 
     @objc public func test() {
-        print("%@.test()", String(describing: self));
+        print("%@.test()", String(describing: self))
     }
 
     private var positionProvider: ReactPositionProvider?
 
     @objc(loadMapsIndoors:optionalStrings:resolver:rejecter:)
-    func loadMapsIndoors(apiKey: String, optionalStrings: [String]?, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) -> Void {
+    func loadMapsIndoors(apiKey: String, optionalStrings: [String]?, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         Task {
             do {
-                if (optionalStrings != nil) {
+                if optionalStrings != nil {
                     try await MPMapsIndoors.shared.load(apiKey: apiKey, venueIds: optionalStrings!)
-                }else {
+                } else {
                     try await MPMapsIndoors.shared.load(apiKey: apiKey)
                 }
                 MapsIndoorsData.sharedInstance.isInitialized = true
@@ -37,9 +35,11 @@ public class MapsIndoorsModule: NSObject {
         Task {
             let venues = await MPMapsIndoors.shared.venues()
 
-            return resolve(toJSON(venues.map {
-                MPVenueCodable(withVenue: $0)
-            }))
+            return resolve(
+                toJSON(
+                    venues.map {
+                        MPVenueCodable(withVenue: $0)
+                    }))
         }
     }
 
@@ -47,9 +47,11 @@ public class MapsIndoorsModule: NSObject {
         Task {
             let buildings = await MPMapsIndoors.shared.buildings()
 
-            return resolve(toJSON(buildings.map {
-                MPBuildingCodable(withBuilding: $0)
-            }))
+            return resolve(
+                toJSON(
+                    buildings.map {
+                        MPBuildingCodable(withBuilding: $0)
+                    }))
         }
     }
 
@@ -57,18 +59,22 @@ public class MapsIndoorsModule: NSObject {
         Task {
             let categories = await MPMapsIndoors.shared.categories()
 
-            return resolve(toJSON(categories.map {
-                MPDataFieldCodable(withDataField: $0)
-            }))
+            return resolve(
+                toJSON(
+                    categories.map {
+                        MPDataFieldCodable(withDataField: $0)
+                    }))
         }
     }
 
     @objc public func getLocations(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         Task {
             let locations = await MPMapsIndoors.shared.locationsWith(query: MPQuery(), filter: MPFilter())
-            return resolve(toJSON(locations.map {
-                MPLocationCodable(withLocation: $0)
-            }))
+            return resolve(
+                toJSON(
+                    locations.map {
+                        MPLocationCodable(withLocation: $0)
+                    }))
         }
     }
 
@@ -132,7 +138,7 @@ public class MapsIndoorsModule: NSObject {
             return doReject(reject, message: "getMapStyles: Got no styles")
         }
 
-        let mapStyles = styles.map({ MPMapStyleCodable(withMapStyle:$0) })
+        let mapStyles = styles.map({ MPMapStyleCodable(withMapStyle: $0) })
         return resolve(toJSON(mapStyles))
     }
 
@@ -145,7 +151,6 @@ public class MapsIndoorsModule: NSObject {
     }
 
     @objc public func getLocationsAsync(_ query: String, filter: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-
         Task {
             do {
                 let locs = await MPMapsIndoors.shared.locationsWith(query: try fromJSON(query), filter: try fromJSON(filter))
@@ -161,7 +166,7 @@ public class MapsIndoorsModule: NSObject {
 
     @objc public func locationDisplayRuleExists(_ locId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         if let location = MPMapsIndoors.shared.locationWith(locationId: locId) {
-            if let _ = MPMapsIndoors.shared.displayRuleFor(location: location) {
+            if MPMapsIndoors.shared.displayRuleFor(location: location) != nil {
                 return resolve(true)
             } else {
                 return resolve(false)
@@ -172,13 +177,11 @@ public class MapsIndoorsModule: NSObject {
     }
 
     @objc public func displayRuleNameExists(_ name: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-
         let exists: Bool = MPMapsIndoors.shared.displayRuleFor(type: name.lowercased()) != nil
         return resolve(exists)
     }
 
     @objc public func setPositionProvider(_ name: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-
         let provider = ReactPositionProvider()
         provider.name = name
 
@@ -189,7 +192,6 @@ public class MapsIndoorsModule: NSObject {
     }
 
     @objc public func removePositionProvider(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-
         positionProvider = nil
         MPMapsIndoors.shared.positionProvider = nil
 
@@ -214,7 +216,6 @@ public class MapsIndoorsModule: NSObject {
     }
 
     @objc public func applyUserRoles(_ userRolesJSON: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-
         do {
             let userRoles: [MPUserRole] = try fromJSON(userRolesJSON)
             MPMapsIndoors.shared.userRoles = userRoles
@@ -242,10 +243,9 @@ public class MapsIndoorsModule: NSObject {
     }
 
     @objc public func isReady(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-
         return resolve(MPMapsIndoors.shared.ready)
     }
-    
+
     @objc public func getDefaultVenue(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         Task {
             guard let defaultVenue = await MPMapsIndoors.shared.venues().first else {
@@ -254,17 +254,17 @@ public class MapsIndoorsModule: NSObject {
             return resolve(toJSON(MPVenueCodable(withVenue: defaultVenue)))
         }
     }
-    
+
     @objc public func checkOfflineDataAvailability(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         Task {
             guard let key = MPMapsIndoors.shared.apiKey else {
                 return reject("1", "isApiKeyValid: API key not set", nil)
             }
-            
+
             return resolve(await MPMapsIndoors.shared.isOfflineDataAvailable(apiKey: key))
         }
     }
-    
+
     @objc public func destroy(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         Task {
             MPMapsIndoors.shared.shutdown()
@@ -272,57 +272,53 @@ public class MapsIndoorsModule: NSObject {
             return resolve(nil)
         }
     }
-    
+
     @objc public func isInitialized(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         return resolve(MapsIndoorsData.sharedInstance.isInitialized)
     }
-    
+
     @objc public func setLanguage(_ language: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        
         MPMapsIndoors.shared.language = language
         return resolve(nil)
     }
-    
+
     @objc public func synchronizeContent(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         Task {
             do {
                 try await MPMapsIndoors.shared.synchronize()
                 return resolve(nil)
-            }
-            catch let e {
+            } catch let e {
                 return doReject(reject, error: e)
             }
         }
     }
 
     @objc(addVenuesToSync:resolver:rejecter:)
-    func addVenuesToSync(venues: [String], resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) -> Void {
+    func addVenuesToSync(venues: [String], resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         Task {
             do {
                 try await MPMapsIndoors.shared.addVenuesToSync(venueIds: venues)
                 return resolve(nil)
-            }
-            catch let e {
+            } catch let e {
                 return doReject(reject, error: e)
             }
         }
     }
 
     @objc(removeVenuesToSync:resolver:rejecter:)
-    func removeVenuesToSync(venues: [String], resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) -> Void {
+    func removeVenuesToSync(venues: [String], resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         Task {
             do {
                 try await MPMapsIndoors.shared.removeVenuesToSync(venueIds: venues)
                 return resolve(nil)
-            }
-            catch let e {
+            } catch let e {
                 return doReject(reject, error: e)
             }
         }
     }
 
     @objc(getSyncedVenues:rejecter:)
-    func getSyncedVenues(resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) -> Void {
+    func getSyncedVenues(resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         return resolve(MPMapsIndoors.shared.venuesToSync)
     }
 
@@ -335,28 +331,26 @@ public class MapsIndoorsModule: NSObject {
         if dataSet == nil {
             return resolve(false)
         }
-        
-        
+
         datasetCacheManager.delegate = DatasetDelegate(promise: resolve, dataset: dataSet!.cacheItem)
-        
+
         datasetCacheManager.synchronizeCacheItems([dataSet!.cacheItem])
     }
-    
 }
 
 class DatasetDelegate: NSObject, MPDataSetCacheManagerDelegate {
     var promise: RCTPromiseResolveBlock
     var dataset: MPDataSetCacheItem
-    
+
     init(promise: @escaping RCTPromiseResolveBlock, dataset: MPDataSetCacheItem) {
         self.promise = promise
         self.dataset = dataset
     }
-    
+
     func dataSetManager(_ dataSetManager: MPDataSetCacheManager, didFinishSynchronizingItem item: MPDataSetCacheItem) {
         if item.cachingItemId == dataset.cachingItemId {
             return promise(true)
-        }else {
+        } else {
             return promise(false)
         }
     }
