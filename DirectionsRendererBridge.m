@@ -56,4 +56,9 @@
     RCT_EXTERN_METHOD(setDefaultRouteStopIcon: (NSString *) iconString
       resolver:(RCTPromiseResolveBlock) resolve
       rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(setPolyLineColors: (NSString *) foregroundString
+      backgroundString:(NSString *) backgroundString
+      resolver:(RCTPromiseResolveBlock) resolve
+      rejecter:(RCTPromiseRejectBlock) reject)
 @end

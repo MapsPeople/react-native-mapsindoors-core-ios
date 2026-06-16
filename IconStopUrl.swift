@@ -10,7 +10,7 @@ import MapsIndoors
 
 public class IconStopUrl: MPRouteStopIconProvider {
     public var image: UIImage?
-    
+
     init(image: UIImage) {
         self.image = image
     }
