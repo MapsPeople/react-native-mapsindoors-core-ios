@@ -9,7 +9,7 @@
 
 @interface RCT_EXTERN_MODULE(DirectionsService, NSObject)
 
-    RCT_EXTERN_METHOD(create: (RCTPromiseResolveBlock) resolve
+    RCT_EXTERN_METHOD(createService: (RCTPromiseResolveBlock) resolve
       rejecter:(RCTPromiseRejectBlock) reject)
 
     RCT_EXTERN_METHOD(addAvoidWayType: (NSString *) wayType

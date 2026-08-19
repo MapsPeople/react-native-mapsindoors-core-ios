@@ -1,5 +1,4 @@
 import Foundation
-
 import MapsIndoors
 
 public class ReactPositionProvider: MPPositionProvider {
@@ -15,7 +14,7 @@ public class ReactPositionProvider: MPPositionProvider {
 
     public func setLatestPosition(positionResult: MPPositionResult) {
         DispatchQueue.main.async {
-            if (self.latestPosition?.floorIndex != positionResult.floorIndex) {
+            if self.latestPosition?.floorIndex != positionResult.floorIndex {
                 let floorSelector = self.mapsIndoorsData.floorSelector
                 floorSelector?.onUserPositionFloorChange(floorIndex: positionResult.floorIndex)
             }
