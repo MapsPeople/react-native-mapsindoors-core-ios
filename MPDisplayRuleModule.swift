@@ -1454,6 +1454,32 @@ public class MPDisplayRuleModule: NSObject {
         return resolve(nil)
     }
 
+    @objc public func getIconZoomFactor(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+
+        return resolve(displayRule.iconZoomFactor)
+    }
+
+    /// Sets the factor the icon grows by across the solution's icon-scale zoom band.
+    ///
+    /// -1 is the wrapper's "leave it alone" sentinel, the same one `setIconScale` uses: on iOS
+    /// `MPDisplayRule.iconZoomFactor` is a non-optional `Double`, so an override cannot be cleared
+    /// back to inherited through it. Any other value is handed to the SDK setter, which rejects and
+    /// logs anything outside the contract's finite `> 0 && <= 4` rather than clamping it.
+    @objc public func setIconZoomFactor(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+
+        if value != -1 {
+            displayRule.iconZoomFactor = value.doubleValue
+        }
+
+        return resolve(nil)
+    }
+
     @objc public func getBadgeScale(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)

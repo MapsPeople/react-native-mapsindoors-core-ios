@@ -579,6 +579,15 @@
                       resolver:(RCTPromiseResolveBlock) resolve
                       rejecter:(RCTPromiseRejectBlock) reject)
 
+    RCT_EXTERN_METHOD(getIconZoomFactor: (NSString *) displayRuleId
+                      resolver:(RCTPromiseResolveBlock) resolve
+                      rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(setIconZoomFactor: (NSString *) displayRuleId
+                      value:(nonnull NSNumber *) value
+                      resolver:(RCTPromiseResolveBlock) resolve
+                      rejecter:(RCTPromiseRejectBlock) reject)
+
     RCT_EXTERN_METHOD(getBadgeScale: (NSString *) displayRuleId
                       resolver:(RCTPromiseResolveBlock) resolve
                       rejecter:(RCTPromiseRejectBlock) reject)
