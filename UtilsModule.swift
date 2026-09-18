@@ -47,40 +47,56 @@ public class UtilsModule: NSObject {
         return resolve(MPGeometryUtils.distance(from: MPGeoPoint(coordinate: it.coordinate), to: MPGeoPoint(coordinate: other.coordinate)))
     }
 
+
+    /// Decodes a GeoJSON geometry string into something queryable.
+    ///
+    /// `JSONDecoder().decode(MPGeometry.self, ...)` always produces a *base* `MPGeometry` - Swift's
+    /// decoder is not polymorphic - so `geo is MPPolygonGeometry` and `geo as? MPPolygonGeometry`
+    /// were always false here, and the SDK's `mp_polygon` / `mp_multiPolygon` accessors are an
+    /// internal NSObject category holding associated objects that nothing sets on a freshly decoded
+    /// value, so they were always nil. Every geometry helper in this file therefore fell through to
+    /// its default branch: `geometryIsInside` always answered false, `geometryArea` always 0, and
+    /// `polygonDistanceToClosestEdge` resolved nil.
+    ///
+    /// Decoding the concrete type by its GeoJSON `type` discriminator fixes all three, and mirrors
+    /// how the Android module dispatches on `geometry.getType()`.
+    private func decodeQueryableGeometry(_ geometry: String) -> (any MPGeometryQueryProtocol)? {
+        let data = Data(geometry.utf8)
+
+        guard let base = try? JSONDecoder().decode(MPGeometry.self, from: data) else {
+            return nil
+        }
+
+        switch base.type {
+        case "Polygon":
+            return try? JSONDecoder().decode(MPPolygonGeometry.self, from: data)
+        case "MultiPolygon":
+            return try? JSONDecoder().decode(MPMultiPolygonGeometry.self, from: data)
+        default:
+            return nil
+        }
+    }
+
     @objc public func geometryIsInside(_ point: String, geometry: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let it = try? JSONDecoder().decode(MPPoint.self, from: Data(point.utf8)) as MPPoint else {
             return reject("Utils error", "Venue not found for current Solution", MPError.unknownError)
         }
 
-        guard let geo = try? JSONDecoder().decode(MPGeometry.self, from: Data(geometry.utf8)) as MPGeometry else {
-            return reject("Utils error", "Venue not found for current Solution", MPError.unknownError)
+        guard let geo = decodeQueryableGeometry(geometry) else {
+            // Not a polygon or multi-polygon: nothing can be inside it.
+            return resolve(false)
         }
 
-        if geo is MPPolygonGeometry {
-            let poly = geo.mp_polygon
-            return resolve(poly?.containsCoordinate(it.coordinate))
-        } else if geo is MPMultiPolygonGeometry {
-            let multiPoly = geo.mp_multiPolygon
-            resolve(multiPoly?.containsCoordinate(it.coordinate))
-        } else {
-            resolve(false)
-        }
+        return resolve(geo.containsCoordinate(it.coordinate))
     }
 
     @objc public func geometryArea(_ geometry: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        guard let geo = try? JSONDecoder().decode(MPGeometry.self, from: Data(geometry.utf8)) as MPGeometry else {
-            return reject("Utils error", "Venue not found for current Solution", MPError.unknownError)
-        }
-
-        if geo is MPPolygonGeometry {
-            let poly = geo.mp_polygon
-            return resolve(poly?.area)
-        } else if geo is MPMultiPolygonGeometry {
-            let multiPoly = geo.mp_multiPolygon
-            return resolve(multiPoly?.area)
-        } else {
+        guard let geo = decodeQueryableGeometry(geometry) else {
+            // A point or line has no area.
             return resolve(0)
         }
+
+        return resolve(geo.area)
     }
 
     @objc public func polygonDistanceToClosestEdge(_ point: String, geometry: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
@@ -88,29 +104,25 @@ public class UtilsModule: NSObject {
             return reject("Utils error", "Venue not found for current Solution", MPError.unknownError)
         }
 
-        guard let geo = try? JSONDecoder().decode(MPGeometry.self, from: Data(geometry.utf8)) as MPGeometry else {
-            return reject("Utils error", "Venue not found for current Solution", MPError.unknownError)
+        // Handles both Polygon and MultiPolygon, and lets the SDK do the maths. The hand-rolled
+        // loop this replaces walked only the outer ring - ignoring holes - and indexed
+        // `1..<outerRing.count`, which traps on an empty ring and yields
+        // Double.greatestFiniteMagnitude for a single-coordinate ring.
+        //
+        // Like the Android module, this returns the *squared* distance.
+        guard let geo = decodeQueryableGeometry(geometry) else {
+            return reject(
+                "Utils error",
+                "Geometry is neither a Polygon nor a MultiPolygon, so it has no edges",
+                MPError.unknownError
+            )
         }
 
-        if geo is MPPolygonGeometry {
-            guard let outerRing = (geo.mp_polygon.coordinates.first?.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }) else {
-                return reject("Utils error", "Venue not found for current Solution", MPError.unknownError)
-            }
-
-            var shortestDistance = Double.greatestFiniteMagnitude
-            for i in 1..<outerRing.count {
-                let p1 = outerRing[i - 1]
-                let p2 = outerRing[i]
-
-                let distanceToLine = MPGeometryUtils.distancePointToLine(point: it.coordinate, lineStart: p1, lineEnd: p2)
-                if distanceToLine < shortestDistance {
-                    shortestDistance = distanceToLine
-                }
-            }
-
-            return resolve(shortestDistance)
-        }
-        return resolve(nil)
+        // Both overloads behave identically here; use the MPPoint one, as the Android module does.
+        // Note the SDK answers -1 for some geometry/point combinations even once the geometry
+        // decodes correctly - that is an SDK-level question, not something this module can fix. What
+        // matters here is that a number is resolved at all, honouring Promise<number>.
+        return resolve(geo.squaredDistanceToClosestEdge(it))
     }
 
     @objc public func parseMapClientUrl(_ venueId: String, locationId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {

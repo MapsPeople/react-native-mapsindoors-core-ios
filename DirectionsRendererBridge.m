@@ -61,4 +61,15 @@
       backgroundString:(NSString *) backgroundString
       resolver:(RCTPromiseResolveBlock) resolve
       rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(setOptions: (NSString *) optionsString
+      resolver:(RCTPromiseResolveBlock) resolve
+      rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(getOptions: (RCTPromiseResolveBlock) resolve
+      rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(finishGuidance: (nonnull NSNumber *) usagePercentage
+      resolver:(RCTPromiseResolveBlock) resolve
+      rejecter:(RCTPromiseRejectBlock) reject)
 @end
