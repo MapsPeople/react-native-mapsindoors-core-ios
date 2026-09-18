@@ -33,6 +33,7 @@ class MapsIndoorsData {
         case onInfoWindowClick
         case onLiveLocationUpdate
         case onLegSelected
+        case onBaseMapCacheProgress
     }
 
     lazy var allEvents: [String] = {

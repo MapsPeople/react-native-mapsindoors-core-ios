@@ -1,6 +1,7 @@
 #import <React/RCTBridgeModule.h>
+#import <React/RCTEventEmitter.h>
 
-@interface RCT_EXTERN_MODULE(MapsIndoorsModule, NSObject)
+@interface RCT_EXTERN_MODULE(MapsIndoorsModule, RCTEventEmitter)
 
     RCT_EXTERN_METHOD(loadMapsIndoors:(NSString *)apiKey
                   optionalStrings:(NSArray<NSString *> _Nullable)optionalStrings
@@ -124,5 +125,17 @@
     RCT_EXTERN_METHOD(cacheData:(NSString) apiKey
                   resolver:(RCTPromiseResolveBlock) resolve
                   rejecter:(RCTPromiseRejectBlock) reject)
+
+    RCT_EXTERN_METHOD(isBaseMapCachingSupported:(RCTPromiseResolveBlock)resolve
+                    rejecter:(RCTPromiseRejectBlock)reject)
+
+    RCT_EXTERN_METHOD(setBaseMapTilesEnabled:(BOOL)enabled
+                    apiKey:(NSString *)apiKey
+                    resolver:(RCTPromiseResolveBlock)resolve
+                    rejecter:(RCTPromiseRejectBlock)reject)
+
+    RCT_EXTERN_METHOD(synchronizeBaseMapTiles:(NSArray<NSString *> _Nullable)apiKeys
+                    resolver:(RCTPromiseResolveBlock)resolve
+                    rejecter:(RCTPromiseRejectBlock)reject)
 
 @end

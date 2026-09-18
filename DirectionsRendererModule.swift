@@ -14,6 +14,49 @@ import React
 public class DirectionsRendererModule: RCTEventEmitter {
     private var isListeningForLegChanges: Bool = false
     private var animationDuration: NSNumber = 5
+    /// The custom stamp URL last applied through ``setOptions``.
+    ///
+    /// The SDK stores the downloaded `UIImage`, not its URL, so ``getOptions`` cannot recover it from
+    /// the renderer. Without it a read-modify-write of the options would feed back a `custom` stamp
+    /// type with no image and silently drop the stamp.
+    ///
+    /// Only ever touched on the main actor - written at the end of ``setOptions``, read in
+    /// ``getOptions`` - since React Native invokes this module off the main queue
+    /// (``requiresMainQueueSetup()`` is `false`) and both would otherwise race.
+    @MainActor private var appliedStampImageUrl: String?
+
+    /// Guards ``setOptionsGeneration``, which is taken on React Native's method queue and read on
+    /// the main actor.
+    private let setOptionsGenerationLock = NSLock()
+
+    /// Identifies the most recent ``setOptions`` call.
+    ///
+    /// A custom stamp has to be downloaded before the options can be applied, so two calls can finish
+    /// out of order and a slow download would otherwise overwrite a newer call's result. Each call
+    /// takes a token and applies its result only while it is still the newest, making last-call-wins
+    /// hold regardless of how long each download took.
+    ///
+    /// The token has to be taken *synchronously*, before the call's `Task` is created. React Native
+    /// serialises this module's methods on one queue, so taking it there makes the token follow call
+    /// order. Taking it inside the `Task` would instead number the calls by whichever one the
+    /// cooperative pool happened to schedule first, which is not the order they were made in - the
+    /// newer call could take the lower token and then be discarded in favour of the older one.
+    private var setOptionsGeneration: UInt64 = 0
+
+    /// Takes the next token, in call order.
+    private func nextSetOptionsGeneration() -> UInt64 {
+        setOptionsGenerationLock.lock()
+        defer { setOptionsGenerationLock.unlock() }
+        setOptionsGeneration &+= 1
+        return setOptionsGeneration
+    }
+
+    /// Whether `generation` is still the newest token, i.e. no later ``setOptions`` call has started.
+    private func isCurrentSetOptionsGeneration(_ generation: UInt64) -> Bool {
+        setOptionsGenerationLock.lock()
+        defer { setOptionsGenerationLock.unlock() }
+        return generation == setOptionsGeneration
+    }
 
     @objc public override static func requiresMainQueueSetup() -> Bool { return false }
 
@@ -269,6 +312,96 @@ public class DirectionsRendererModule: RCTEventEmitter {
         }
     }
 
+    @objc public func setOptions(_ optionsString: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        if MapsIndoorsData.sharedInstance.directionsRenderer == nil {
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
+        }
+
+        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
+
+        guard let directionsRenderer else {
+            return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
+        }
+
+        guard let options: DirectionsRendererOptions = try? fromJSON(optionsString) else {
+            return doReject(reject, message: "Options could not be parsed")
+        }
+
+        // Taken here rather than inside the Task, so it follows the order the calls were made in.
+        let generation = nextSetOptionsGeneration()
+
+        Task {
+            // The SDK takes the custom stamp as an image, so it has to be fetched before applying.
+            // Immutable, because it is captured by the main-actor block below - a captured `var`
+            // is a concurrency error in the Swift 6 language mode.
+            let stampImage = await self.loadStampImage(urlString: options.stampImageUrl)
+
+            let mpOptions = options.toMPDirectionsRendererOptions(stampImage: stampImage)
+
+            let applied = await MainActor.run { () -> Bool in
+                // A later call has already started, so this one is stale - its download simply took
+                // longer. Dropping it keeps last-call-wins.
+                guard self.isCurrentSetOptionsGeneration(generation) else { return false }
+
+                directionsRenderer.options = mpOptions
+                // Only remember a URL that produced an image, so a failed download reads back as
+                // "no custom stamp" rather than as one the renderer is not actually drawing.
+                self.appliedStampImageUrl = stampImage != nil ? options.stampImageUrl : nil
+                return true
+            }
+
+            if !applied {
+                print("MapsIndoors: setOptions was superseded by a later call, so its options were not applied")
+            }
+
+            // Resolved either way, including when superseded. The caller's own later call is what
+            // replaced this one, and that call's options are what is in force, so this is not a
+            // failure to report - and rejecting would make an ordinary rapid sequence of setOptions
+            // calls look broken. Leaving the promise unsettled would be worse still.
+            resolve(nil)
+        }
+    }
+
+    @objc public func getOptions(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        if MapsIndoorsData.sharedInstance.directionsRenderer == nil {
+            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
+        }
+
+        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
+
+        guard let directionsRenderer else {
+            return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
+        }
+
+        // Both reads have to happen on the main actor: `appliedStampImageUrl` is written there by
+        // setOptions, and the SDK's own options getter resolves against renderer state that is
+        // main-thread affine. React Native calls this module off the main queue.
+        Task { @MainActor in
+            resolve(toJSON(DirectionsRendererOptions(from: directionsRenderer.options, stampImageUrl: self.appliedStampImageUrl)))
+        }
+    }
+
+    @objc public func finishGuidance(_ usagePercentage: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
+
+        guard let directionsRenderer else {
+            return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
+        }
+
+        // Resolve only once the work has run, matching setOptions - resolving first would report
+        // success before the SDK had been told anything.
+        Task { @MainActor in
+            // A negative value means the app did not supply a figure, so the SDK derives it from
+            // the route's own progress.
+            if usagePercentage.doubleValue < 0 {
+                directionsRenderer.finishGuidance()
+            } else {
+                directionsRenderer.finishGuidance(usagePercentage: usagePercentage.doubleValue)
+            }
+            resolve(nil)
+        }
+    }
+
     @objc public func setOnLegSelectedListener(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         isListeningForLegChanges = true
         return resolve(nil)
@@ -365,9 +498,37 @@ public class DirectionsRendererModule: RCTEventEmitter {
         }
     }
 
+    /// Fetches the custom stamp icon, or nil when there is none, the URL is malformed, or the
+    /// download fails.
+    ///
+    /// A failure is logged rather than rejected: the rest of the options still apply, so failing the
+    /// whole call would misreport it - but a silently missing stamp is otherwise undiagnosable.
+    private func loadStampImage(urlString: String?) async -> UIImage? {
+        guard let urlString else { return nil }
+        guard let url = URL(string: urlString) else {
+            print("MapsIndoors: route stamp image URL is malformed: \(urlString)")
+            return nil
+        }
+        do {
+            return try await downloadImage(from: url)
+        } catch {
+            print("MapsIndoors: could not load the route stamp image at \(urlString): \(error)")
+            return nil
+        }
+    }
+
+    enum ImageDownloadError: Error {
+        /// The response body was fetched but is not decodable as an image - what a 404 or an error
+        /// page produces. Force unwrapping here would trap instead, which no caller can catch.
+        case notAnImage(URL)
+    }
+
     func downloadImage(from url: URL) async throws -> UIImage {
         let (data, _) = try await URLSession.shared.data(from: url)
-        return UIImage(data: data)!
+        guard let image = UIImage(data: data) else {
+            throw ImageDownloadError.notAnImage(url)
+        }
+        return image
     }
 
     func isValidUrl(_ urlString: String) -> Bool {
