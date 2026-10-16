@@ -25,38 +25,15 @@ public class DirectionsRendererModule: RCTEventEmitter {
     /// (``requiresMainQueueSetup()`` is `false`) and both would otherwise race.
     @MainActor private var appliedStampImageUrl: String?
 
-    /// Guards ``setOptionsGeneration``, which is taken on React Native's method queue and read on
-    /// the main actor.
-    private let setOptionsGenerationLock = NSLock()
+    /// Orders ``setOptions`` calls, which download a custom stamp before applying.
+    private let optionsGeneration = CallGeneration()
 
-    /// Identifies the most recent ``setOptions`` call.
-    ///
-    /// A custom stamp has to be downloaded before the options can be applied, so two calls can finish
-    /// out of order and a slow download would otherwise overwrite a newer call's result. Each call
-    /// takes a token and applies its result only while it is still the newest, making last-call-wins
-    /// hold regardless of how long each download took.
-    ///
-    /// The token has to be taken *synchronously*, before the call's `Task` is created. React Native
-    /// serialises this module's methods on one queue, so taking it there makes the token follow call
-    /// order. Taking it inside the `Task` would instead number the calls by whichever one the
-    /// cooperative pool happened to schedule first, which is not the order they were made in - the
-    /// newer call could take the lower token and then be discarded in favour of the older one.
-    private var setOptionsGeneration: UInt64 = 0
+    /// Orders the calls that replace the route: ``setRoute``, which may download URL stop icons
+    /// first, and ``clear``. Without it a slow download would draw its route over a later call's.
+    private let routeGeneration = CallGeneration()
 
-    /// Takes the next token, in call order.
-    private func nextSetOptionsGeneration() -> UInt64 {
-        setOptionsGenerationLock.lock()
-        defer { setOptionsGenerationLock.unlock() }
-        setOptionsGeneration &+= 1
-        return setOptionsGeneration
-    }
-
-    /// Whether `generation` is still the newest token, i.e. no later ``setOptions`` call has started.
-    private func isCurrentSetOptionsGeneration(_ generation: UInt64) -> Bool {
-        setOptionsGenerationLock.lock()
-        defer { setOptionsGenerationLock.unlock() }
-        return generation == setOptionsGeneration
-    }
+    /// Orders ``setDefaultRouteStopIcon`` calls, which may download the icon first.
+    private let defaultStopIconGeneration = CallGeneration()
 
     @objc public override static func requiresMainQueueSetup() -> Bool { return false }
 
@@ -67,330 +44,314 @@ public class DirectionsRendererModule: RCTEventEmitter {
         return MapsIndoorsData.sharedInstance.allEvents
     }
 
-    @objc public func clear(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if MapsIndoorsData.sharedInstance.directionsRenderer == nil {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
-            animationDuration = 5
+    /// The directions renderer, created from the map control on first use.
+    ///
+    /// Main-actor only: creating the renderer goes through the map control, and the renderer itself is
+    /// main-actor isolated in the SDK, so every method below reaches it from inside ``onMainThread``.
+    @MainActor private func currentDirectionsRenderer() -> MPDirectionsRenderer? {
+        let data = MapsIndoorsData.sharedInstance
+        if data.directionsRenderer == nil {
+            data.directionsRenderer = data.mapView?.getMapControl()?.newDirectionsRenderer()
         }
+        return data.directionsRenderer
+    }
 
-        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
-
-        guard let directionsRenderer else {
-            return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
+    /// Applies the map's padding to the renderer, so the route is framed inside the visible map.
+    @MainActor private func applyMapPadding(to directionsRenderer: MPDirectionsRenderer) {
+        if let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() {
+            directionsRenderer.padding = mapControl.mapPadding
         }
+    }
 
-        DispatchQueue.main.async {
+    private static let noRendererMessage = "directions renderer null. MapControl needs to have been instantiated first"
+
+    @objc public func clear(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        // Supersedes any setRoute still downloading its icons, so that route is not drawn afterwards.
+        _ = routeGeneration.next()
+
+        onMainThread {
+            let isNewRenderer = MapsIndoorsData.sharedInstance.directionsRenderer == nil
+            guard let directionsRenderer = self.currentDirectionsRenderer() else {
+                return doReject(reject, message: Self.noRendererMessage)
+            }
+            if isNewRenderer {
+                self.animationDuration = 5
+            }
+
             directionsRenderer.clear()
             directionsRenderer.route = nil
+            resolve(nil)
         }
-        return resolve(nil)
     }
 
-    @objc public func getSelectedLegFloorIndex(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if MapsIndoorsData.sharedInstance.directionsRenderer == nil {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
+    @objc public func getSelectedLegFloorIndex(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        onMainThread {
+            guard let directionsRenderer = self.currentDirectionsRenderer() else {
+                return doReject(reject, message: Self.noRendererMessage)
+            }
+
+            self.applyMapPadding(to: directionsRenderer)
+
+            guard let legIndex = directionsRenderer.route?.legs[directionsRenderer.routeLegIndex].end_location.zLevel.int32Value else {
+                return doReject(reject, message: "No current floor available")
+            }
+
+            resolve(legIndex)
         }
-
-        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
-
-        guard let directionsRenderer else {
-            return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
-        }
-
-        directionsRenderer.padding = MapsIndoorsData.sharedInstance.mapView!.getMapControl()!.mapPadding
-
-        guard let legIndex = directionsRenderer.route?.legs[directionsRenderer.routeLegIndex].end_location.zLevel.int32Value else {
-            return doReject(reject, message: "No current floor available")
-        }
-
-        return resolve(legIndex)
     }
 
-    @objc public func nextLeg(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if MapsIndoorsData.sharedInstance.directionsRenderer == nil {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
-        }
+    @objc public func nextLeg(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        onMainThread {
+            guard let directionsRenderer = self.currentDirectionsRenderer() else {
+                return doReject(reject, message: Self.noRendererMessage)
+            }
 
-        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
+            self.applyMapPadding(to: directionsRenderer)
 
-        guard let directionsRenderer else {
-            return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
-        }
-
-        directionsRenderer.padding = MapsIndoorsData.sharedInstance.mapView!.getMapControl()!.mapPadding
-
-        DispatchQueue.main.async {
-            let succes = directionsRenderer.nextLeg()
-
-            if succes {
+            if directionsRenderer.nextLeg() {
                 directionsRenderer.animate(duration: self.animationDuration.doubleValue)
                 if self.isListeningForLegChanges {
                     self.sendEvent(withName: MapsIndoorsData.Event.onLegSelected.rawValue, body: ["leg": directionsRenderer.routeLegIndex])
                 }
             }
+            resolve(nil)
         }
-        return resolve(nil)
     }
 
-    @objc public func previousLeg(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if MapsIndoorsData.sharedInstance.directionsRenderer == nil {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
-        }
+    @objc public func previousLeg(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        onMainThread {
+            guard let directionsRenderer = self.currentDirectionsRenderer() else {
+                return doReject(reject, message: Self.noRendererMessage)
+            }
 
-        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
+            self.applyMapPadding(to: directionsRenderer)
 
-        guard let directionsRenderer else {
-            return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
-        }
-
-        directionsRenderer.padding = MapsIndoorsData.sharedInstance.mapView!.getMapControl()!.mapPadding
-
-        DispatchQueue.main.async {
-            let succes = directionsRenderer.previousLeg()
-
-            if succes {
+            if directionsRenderer.previousLeg() {
                 directionsRenderer.animate(duration: self.animationDuration.doubleValue)
                 if self.isListeningForLegChanges {
                     self.sendEvent(withName: MapsIndoorsData.Event.onLegSelected.rawValue, body: ["leg": directionsRenderer.routeLegIndex])
                 }
             }
+            resolve(nil)
         }
-
-        return resolve(nil)
     }
 
-    @objc public func selectLegIndex(_ legIndex: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if MapsIndoorsData.sharedInstance.directionsRenderer == nil {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
-        }
+    @objc public func selectLegIndex(_ legIndex: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        onMainThread {
+            guard let directionsRenderer = self.currentDirectionsRenderer() else {
+                return doReject(reject, message: Self.noRendererMessage)
+            }
 
-        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
+            guard let route = directionsRenderer.route else {
+                return doReject(reject, message: "No route is set")
+            }
 
-        guard let directionsRenderer else {
-            return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
-        }
+            guard legIndex.intValue >= 0 else {
+                return doReject(reject, message: "Tried to select negative route leg index \(legIndex.intValue)")
+            }
 
-        guard let route = directionsRenderer.route else {
-            return doReject(reject, message: "No route is set")
-        }
+            guard legIndex.intValue < (route.legs.count) else {
+                return doReject(reject, message: "Tried to select route leg index \(legIndex.intValue) outside of range 0..\((route.legs.count)-1)")
+            }
 
-        guard legIndex.intValue >= 0 else {
-            return doReject(reject, message: "Tried to select negative route leg index \(legIndex.intValue)")
-        }
+            self.applyMapPadding(to: directionsRenderer)
 
-        guard legIndex.intValue < (route.legs.count) else {
-            return doReject(reject, message: "Tried to select route leg index \(legIndex.intValue) outside of range 0..\((route.legs.count)-1)")
-        }
-
-        directionsRenderer.padding = MapsIndoorsData.sharedInstance.mapView!.getMapControl()!.mapPadding
-
-        DispatchQueue.main.async {
             directionsRenderer.routeLegIndex = legIndex.intValue
-
             directionsRenderer.animate(duration: self.animationDuration.doubleValue)
 
             if self.isListeningForLegChanges {
                 self.sendEvent(withName: MapsIndoorsData.Event.onLegSelected.rawValue, body: ["leg": directionsRenderer.routeLegIndex])
             }
-        }
-        return resolve(nil)
-    }
-
-    @objc public func setAnimatedPolyline(_ animated: Bool, repeated: Bool, duration: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if MapsIndoorsData.sharedInstance.directionsRenderer == nil {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
-        }
-
-        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
-
-        guard let directionsRenderer else {
-            return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
-        }
-
-        if animated {
-            animationDuration = duration
-        } else {
-            animationDuration = 0
-        }
-
-        return resolve(nil)
-    }
-
-    @objc public func showRouteLegButtons(_ value: Bool, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if MapsIndoorsData.sharedInstance.directionsRenderer == nil {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
-        }
-
-        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
-
-        guard let directionsRenderer else {
-            return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
-        }
-
-        directionsRenderer.showRouteLegButtons = value
-
-        return resolve(nil)
-    }
-
-    @objc public func setCameraAnimationDuration(_ duration: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if MapsIndoorsData.sharedInstance.directionsRenderer == nil {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
-        }
-
-        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
-
-        guard let directionsRenderer else {
-            return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
-        }
-
-        animationDuration = duration
-
-        return resolve(nil)
-    }
-
-    @objc public func setCameraViewFitMode(_ cameraFitMode: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if MapsIndoorsData.sharedInstance.directionsRenderer == nil {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
-        }
-
-        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
-
-        guard let directionsRenderer else {
-            return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
-        }
-
-        var camFitMode: MPCameraViewFitMode? = nil
-
-        switch cameraFitMode {
-        case 0:
-            camFitMode = MPCameraViewFitMode.northAligned
-        case 1:
-            camFitMode = MPCameraViewFitMode.firstStepAligned
-        case 2:
-            camFitMode = MPCameraViewFitMode.startToEndAligned
-        case 3:
-            camFitMode = MPCameraViewFitMode.none
-        default:
-            camFitMode = MPCameraViewFitMode.northAligned
-        }
-
-        directionsRenderer.fitMode = camFitMode!
-        return resolve(nil)
-    }
-
-    @objc public func setDefaultRouteStopIcon(_ defaultIcon: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if MapsIndoorsData.sharedInstance.directionsRenderer == nil {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
-        }
-
-        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
-
-        guard let directionsRenderer else {
-            return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
-        }
-
-        Task {
-            if isValidUrl(defaultIcon) {
-                let test = IconStopUrl(image: try await downloadImage(from: URL(string: defaultIcon)!))
-                directionsRenderer.defaultRouteStopIcon = IconStopUrl(image: try await downloadImage(from: URL(string: defaultIcon)!))
-            } else {
-                do {
-                    var deficon = defaultIcon
-                    deficon.removeLast()
-                    let iconConfig = try JSONDecoder().decode(RouteIcon.self, from: deficon.data(using: .utf8)!)
-                    if iconConfig != nil {
-                        directionsRenderer.defaultRouteStopIcon = iconConfig.getIcon()
-                    } else {
-                        directionsRenderer.defaultRouteStopIcon = nil
-                    }
-                } catch {
-                    print(error)
-                }
-            }
-
             resolve(nil)
         }
+    }
+
+    @objc public func setAnimatedPolyline(_ animated: Bool, repeated: Bool, duration: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        onMainThread {
+            guard self.currentDirectionsRenderer() != nil else {
+                return doReject(reject, message: Self.noRendererMessage)
+            }
+
+            self.animationDuration = animated ? duration : 0
+            resolve(nil)
+        }
+    }
+
+    @objc public func showRouteLegButtons(_ value: Bool, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        onMainThread {
+            guard let directionsRenderer = self.currentDirectionsRenderer() else {
+                return doReject(reject, message: Self.noRendererMessage)
+            }
+
+            directionsRenderer.showRouteLegButtons = value
+            resolve(nil)
+        }
+    }
+
+    @objc public func setCameraAnimationDuration(_ duration: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        onMainThread {
+            guard self.currentDirectionsRenderer() != nil else {
+                return doReject(reject, message: Self.noRendererMessage)
+            }
+
+            self.animationDuration = duration
+            resolve(nil)
+        }
+    }
+
+    @objc public func setCameraViewFitMode(_ cameraFitMode: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        let camFitMode: MPCameraViewFitMode
+        switch cameraFitMode {
+        case 0:
+            camFitMode = .northAligned
+        case 1:
+            camFitMode = .firstStepAligned
+        case 2:
+            camFitMode = .startToEndAligned
+        case 3:
+            camFitMode = .none
+        default:
+            camFitMode = .northAligned
+        }
+
+        onMainThread {
+            guard let directionsRenderer = self.currentDirectionsRenderer() else {
+                return doReject(reject, message: Self.noRendererMessage)
+            }
+
+            directionsRenderer.fitMode = camFitMode
+            resolve(nil)
+        }
+    }
+
+    @objc public func setDefaultRouteStopIcon(_ defaultIcon: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        // Only a URL icon needs work before it can be applied: it is downloaded first, and a failed
+        // download rejects instead of leaving the promise unsettled. Either way the renderer is reached
+        // on the main thread, and looked up there at the moment of applying.
+        let generation = defaultStopIconGeneration.next()
+
+        if isValidUrl(defaultIcon) {
+            Task {
+                do {
+                    let icon = IconStopUrl(image: try await self.downloadImage(from: URL(string: defaultIcon)!))
+                    onMainThread { self.applyDefaultRouteStopIcon(icon, generation: generation, resolve, reject) }
+                } catch {
+                    doReject(reject, error: error)
+                }
+            }
+            return
+        }
+
+        var icon: MPRouteStopIconProvider? = nil
+        do {
+            var deficon = defaultIcon
+            deficon.removeLast()
+            icon = try JSONDecoder().decode(RouteIcon.self, from: deficon.data(using: .utf8)!).getIcon()
+        } catch {
+            // Unchanged behaviour: an icon that cannot be decoded leaves the current one in place.
+            print(error)
+        }
+
+        onMainThread { self.applyDefaultRouteStopIcon(icon, generation: generation, resolve, reject) }
+    }
+
+    /// Sets the default stop icon, or leaves the current one when `icon` is nil. A call superseded by
+    /// a later one while downloading resolves without applying, as ``setOptions`` does.
+    @MainActor private func applyDefaultRouteStopIcon(
+        _ icon: MPRouteStopIconProvider?,
+        generation: UInt64,
+        _ resolve: @escaping RCTPromiseResolveBlock,
+        _ reject: @escaping RCTPromiseRejectBlock
+    ) {
+        guard defaultStopIconGeneration.isCurrent(generation) else {
+            print("MapsIndoors: setDefaultRouteStopIcon was superseded by a later call, so its icon was not applied")
+            return resolve(nil)
+        }
+        guard let directionsRenderer = currentDirectionsRenderer() else {
+            return doReject(reject, message: Self.noRendererMessage, _func: "setDefaultRouteStopIcon")
+        }
+        if let icon {
+            directionsRenderer.defaultRouteStopIcon = icon
+        }
+        resolve(nil)
     }
 
     @objc public func setOptions(_ optionsString: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        if MapsIndoorsData.sharedInstance.directionsRenderer == nil {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
-        }
-
-        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
-
-        guard let directionsRenderer else {
-            return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
-        }
-
-        guard let options: DirectionsRendererOptions = try? fromJSON(optionsString) else {
-            return doReject(reject, message: "Options could not be parsed")
-        }
-
-        // Taken here rather than inside the Task, so it follows the order the calls were made in.
-        let generation = nextSetOptionsGeneration()
-
-        Task {
-            // The SDK takes the custom stamp as an image, so it has to be fetched before applying.
-            // Immutable, because it is captured by the main-actor block below - a captured `var`
-            // is a concurrency error in the Swift 6 language mode.
-            let stampImage = await self.loadStampImage(urlString: options.stampImageUrl)
-
-            let mpOptions = options.toMPDirectionsRendererOptions(stampImage: stampImage)
-
-            let applied = await MainActor.run { () -> Bool in
-                // A later call has already started, so this one is stale - its download simply took
-                // longer. Dropping it keeps last-call-wins.
-                guard self.isCurrentSetOptionsGeneration(generation) else { return false }
-
-                directionsRenderer.options = mpOptions
-                // Only remember a URL that produced an image, so a failed download reads back as
-                // "no custom stamp" rather than as one the renderer is not actually drawing.
-                self.appliedStampImageUrl = stampImage != nil ? options.stampImageUrl : nil
-                return true
+        onMainThread {
+            guard self.currentDirectionsRenderer() != nil else {
+                return doReject(reject, message: Self.noRendererMessage)
             }
 
-            if !applied {
-                print("MapsIndoors: setOptions was superseded by a later call, so its options were not applied")
+            guard let options: DirectionsRendererOptions = try? fromJSON(optionsString) else {
+                return doReject(reject, message: "Options could not be parsed")
             }
 
-            // Resolved either way, including when superseded. The caller's own later call is what
-            // replaced this one, and that call's options are what is in force, so this is not a
-            // failure to report - and rejecting would make an ordinary rapid sequence of setOptions
-            // calls look broken. Leaving the promise unsettled would be worse still.
-            resolve(nil)
+            // Taken here rather than inside the Task, so it follows the order the calls were made in:
+            // React Native calls this module's methods one at a time, and `onMainThread` runs them on
+            // the main queue in that same order.
+            let generation = self.optionsGeneration.next()
+
+            Task {
+                // The SDK takes the custom stamp as an image, so it has to be fetched before applying.
+                // Immutable, because it is captured by the main-actor block below - a captured `var`
+                // is a concurrency error in the Swift 6 language mode.
+                let stampImage = await self.loadStampImage(urlString: options.stampImageUrl)
+
+                let mpOptions = options.toMPDirectionsRendererOptions(stampImage: stampImage)
+
+                let applied = await MainActor.run { () -> Bool in
+                    // A later call has already started, so this one is stale - its download simply took
+                    // longer. Dropping it keeps last-call-wins.
+                    guard self.optionsGeneration.isCurrent(generation) else { return false }
+
+                    // Looked up again rather than reusing the one checked above: a new map control can
+                    // have replaced the renderer while the stamp was downloading.
+                    guard let directionsRenderer = self.currentDirectionsRenderer() else {
+                        print("MapsIndoors: setOptions found no directions renderer to apply its options to")
+                        return true
+                    }
+                    directionsRenderer.options = mpOptions
+                    // Only remember a URL that produced an image, so a failed download reads back as
+                    // "no custom stamp" rather than as one the renderer is not actually drawing.
+                    self.appliedStampImageUrl = stampImage != nil ? options.stampImageUrl : nil
+                    return true
+                }
+
+                if !applied {
+                    print("MapsIndoors: setOptions was superseded by a later call, so its options were not applied")
+                }
+
+                // Resolved either way, including when superseded. The caller's own later call is what
+                // replaced this one, and that call's options are what is in force, so this is not a
+                // failure to report - and rejecting would make an ordinary rapid sequence of setOptions
+                // calls look broken. Leaving the promise unsettled would be worse still.
+                resolve(nil)
+            }
         }
     }
 
     @objc public func getOptions(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        if MapsIndoorsData.sharedInstance.directionsRenderer == nil {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
-        }
+        // Both reads happen on the main actor: `appliedStampImageUrl` is written there by setOptions,
+        // and the renderer and its options are main-actor isolated in the SDK.
+        onMainThread {
+            guard let directionsRenderer = self.currentDirectionsRenderer() else {
+                return doReject(reject, message: Self.noRendererMessage)
+            }
 
-        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
-
-        guard let directionsRenderer else {
-            return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
-        }
-
-        // Both reads have to happen on the main actor: `appliedStampImageUrl` is written there by
-        // setOptions, and the SDK's own options getter resolves against renderer state that is
-        // main-thread affine. React Native calls this module off the main queue.
-        Task { @MainActor in
             resolve(toJSON(DirectionsRendererOptions(from: directionsRenderer.options, stampImageUrl: self.appliedStampImageUrl)))
         }
     }
 
     @objc public func finishGuidance(_ usagePercentage: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
-
-        guard let directionsRenderer else {
-            return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
-        }
-
         // Resolve only once the work has run, matching setOptions - resolving first would report
         // success before the SDK had been told anything.
-        Task { @MainActor in
+        onMainThread {
+            // Deliberately not `currentDirectionsRenderer()`: finishing guidance on a renderer that was
+            // never used for a route would only create one to finish nothing.
+            guard let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer else {
+                return doReject(reject, message: Self.noRendererMessage)
+            }
+
             // A negative value means the app did not supply a figure, so the SDK derives it from
             // the route's own progress.
             if usagePercentage.doubleValue < 0 {
@@ -402,31 +363,28 @@ public class DirectionsRendererModule: RCTEventEmitter {
         }
     }
 
-    @objc public func setOnLegSelectedListener(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        isListeningForLegChanges = true
-        return resolve(nil)
+    @objc public func setOnLegSelectedListener(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        // On the main thread with the leg methods that read it.
+        onMainThread {
+            self.isListeningForLegChanges = true
+            resolve(nil)
+        }
     }
 
-    @objc public func setPolyLineColors(_ foregroundString: String, backgroundString: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if MapsIndoorsData.sharedInstance.directionsRenderer == nil {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
-        }
-
-        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
-
-        guard let directionsRenderer else {
-            return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
-        }
-
+    @objc public func setPolyLineColors(_ foregroundString: String, backgroundString: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let foreground = try? colorFromHexString(hex: foregroundString), let background = try? colorFromHexString(hex: backgroundString) else {
             return doReject(reject, message: "Unable to parse color strings \(foregroundString), \(backgroundString)")
         }
 
-        DispatchQueue.main.async {
+        onMainThread {
+            guard let directionsRenderer = self.currentDirectionsRenderer() else {
+                return doReject(reject, message: Self.noRendererMessage)
+            }
+
             directionsRenderer.pathColor = foreground
             directionsRenderer.backgroundColor = background
+            resolve(nil)
         }
-        return resolve(nil)
     }
 
     enum HexParsingError: Error {
@@ -443,19 +401,8 @@ public class DirectionsRendererModule: RCTEventEmitter {
         }
     }
 
-    @objc public func setRoute(_ routeString: String, stopIcons: String, legIndex: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        if MapsIndoorsData.sharedInstance.directionsRenderer == nil {
-            MapsIndoorsData.sharedInstance.directionsRenderer = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.newDirectionsRenderer()
-        }
-
-        let directionsRenderer = MapsIndoorsData.sharedInstance.directionsRenderer
-
-        guard let directionsRenderer else {
-            return doReject(reject, message: "directions renderer null. MapControl needs to have been instantiated first")
-        }
-
-        directionsRenderer.padding = MapsIndoorsData.sharedInstance.mapView!.getMapControl()!.mapPadding
-
+    @objc public func setRoute(_ routeString: String, stopIcons: String, legIndex: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        // Decoded here, off the main thread: a route can be large, and none of this touches the map.
         guard let route = try? JSONDecoder().decode(MPRouteInternal.self, from: Data(routeString.utf8)) else {
             return doReject(reject, message: "Route could not be parsed")
         }
@@ -468,34 +415,68 @@ public class DirectionsRendererModule: RCTEventEmitter {
             return doReject(reject, message: "Tried to select route leg index \(legIndex.intValue) outside of range 0..\((route.legs.count)-1)")
         }
 
-        Task {
-            var stopIconss: [Int: String]? = nil
-            stopIconss = try? JSONDecoder().decode([Int: String].self, from: Data(stopIcons.utf8))
+        let iconStrings = (try? JSONDecoder().decode([Int: String].self, from: Data(stopIcons.utf8))) ?? [:]
 
-            var icons: [Int: any MPRouteStopIconProvider] = [:]
-            if stopIconss != nil {
-                for icon in stopIconss! {
-                    if isValidUrl(icon.value) {
-                        icons[icon.key] = IconStopUrl(image: try await downloadImage(from: URL(string: icon.value)!))
-                    } else {
-                        var ic = icon.value
-                        ic.removeLast()
-                        let iconConfig = try? JSONDecoder().decode(RouteIcon.self, from: ic.data(using: .utf8)!)
-                        if iconConfig != nil {
-                            icons[icon.key] = iconConfig!.getIcon()
-                        }
+        // Taken after validation, so a call that is rejected outright supersedes nothing.
+        let generation = routeGeneration.next()
+
+        // Without URL icons there is nothing to wait for, so the route goes straight onto the main
+        // queue and keeps its place in the order of calls. URL icons are downloaded first, and a failed
+        // download rejects instead of leaving the promise unsettled.
+        guard iconStrings.values.contains(where: { isValidUrl($0) }) else {
+            let icons = iconStrings.compactMapValues { self.decodedStopIcon($0) }
+            onMainThread { self.applyRoute(route, legIndex: legIndex.intValue, stopIcons: icons, generation: generation, resolve, reject) }
+            return
+        }
+
+        Task {
+            do {
+                var icons: [Int: any MPRouteStopIconProvider] = [:]
+                for (key, value) in iconStrings {
+                    if self.isValidUrl(value) {
+                        icons[key] = IconStopUrl(image: try await self.downloadImage(from: URL(string: value)!))
+                    } else if let icon = self.decodedStopIcon(value) {
+                        icons[key] = icon
                     }
                 }
+                onMainThread { self.applyRoute(route, legIndex: legIndex.intValue, stopIcons: icons, generation: generation, resolve, reject) }
+            } catch {
+                doReject(reject, error: error)
             }
-
-            DispatchQueue.main.sync {
-                directionsRenderer.route = route
-                directionsRenderer.routeLegIndex = legIndex.intValue
-                directionsRenderer.render(stopIcons: icons)
-            }
-
-            resolve(nil)
         }
+    }
+
+    /// A stop icon described as JSON (the bridge appends one trailing character), or nil if it does not
+    /// decode.
+    private func decodedStopIcon(_ string: String) -> (any MPRouteStopIconProvider)? {
+        var json = string
+        json.removeLast()
+        return (try? JSONDecoder().decode(RouteIcon.self, from: json.data(using: .utf8)!))?.getIcon()
+    }
+
+    /// Shows `route` on the renderer, looked up at the moment of applying. A call superseded by a later
+    /// ``setRoute`` or ``clear`` while downloading resolves without drawing, as ``setOptions`` does.
+    @MainActor private func applyRoute(
+        _ route: MPRouteInternal,
+        legIndex: Int,
+        stopIcons: [Int: any MPRouteStopIconProvider],
+        generation: UInt64,
+        _ resolve: @escaping RCTPromiseResolveBlock,
+        _ reject: @escaping RCTPromiseRejectBlock
+    ) {
+        guard routeGeneration.isCurrent(generation) else {
+            print("MapsIndoors: setRoute was superseded by a later setRoute or clear, so its route was not drawn")
+            return resolve(nil)
+        }
+        guard let directionsRenderer = currentDirectionsRenderer() else {
+            return doReject(reject, message: Self.noRendererMessage, _func: "setRoute")
+        }
+
+        applyMapPadding(to: directionsRenderer)
+        directionsRenderer.route = route
+        directionsRenderer.routeLegIndex = legIndex
+        directionsRenderer.render(stopIcons: stopIcons)
+        resolve(nil)
     }
 
     /// Fetches the custom stamp icon, or nil when there is none, the URL is malformed, or the
@@ -510,7 +491,7 @@ public class DirectionsRendererModule: RCTEventEmitter {
             return nil
         }
         do {
-            return try await downloadImage(from: url)
+            return try await self.downloadImage(from: url)
         } catch {
             print("MapsIndoors: could not load the route stamp image at \(urlString): \(error)")
             return nil

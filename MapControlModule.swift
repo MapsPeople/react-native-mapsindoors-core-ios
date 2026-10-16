@@ -82,8 +82,8 @@ public class MapControlModule: RCTEventEmitter {
     @objc public func setFilter(
         _ filterJSON: String,
         filterBehaviorJSON: String,
-        resolver resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        resolver resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
         do {
             let filter: MPFilter = try fromJSON(filterJSON)
@@ -92,8 +92,10 @@ public class MapControlModule: RCTEventEmitter {
                 filterBehavior.maxZoom = Double.nan
             }
 
-            MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.setFilter(filter: filter, behavior: filterBehavior)
-            return resolve(true)
+            onMainThread {
+                MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.setFilter(filter: filter, behavior: filterBehavior)
+                resolve(true)
+            }
         } catch let e {
             return doReject(reject, error: e)
         }
@@ -102,17 +104,18 @@ public class MapControlModule: RCTEventEmitter {
     @objc public func setFilterWithLocations(
         _ locationIdsJSON: String,
         filterBehaviorJSON: String,
-        resolver resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        resolver resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
         do {
             let locations: [String] = try fromJSON(locationIdsJSON)
             let filterBehavior: MPFilterBehavior = try fromJSON(filterBehaviorJSON)
             let locs = (locations.compactMap { MPMapsIndoors.shared.locationWith(locationId: $0) })
 
-            MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.setFilter(locations: locs, behavior: filterBehavior)
-
-            return resolve(true)
+            onMainThread {
+                MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.setFilter(locations: locs, behavior: filterBehavior)
+                resolve(true)
+            }
         } catch let e {
             return doReject(reject, error: e)
         }
@@ -121,8 +124,8 @@ public class MapControlModule: RCTEventEmitter {
     @objc public func setHighlight(
         _ locationIdsJSON: String,
         highlightBehaviorJSON: String,
-        resolver resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        resolver resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
         do {
             let locations: [String] = try fromJSON(locationIdsJSON)
@@ -133,9 +136,10 @@ public class MapControlModule: RCTEventEmitter {
                 highlightBehavior.maxZoom = Double.nan
             }
 
-            MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.setHighlight(locations: locs, behavior: highlightBehavior)
-
-            return resolve(true)
+            onMainThread {
+                MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.setHighlight(locations: locs, behavior: highlightBehavior)
+                resolve(true)
+            }
         } catch let e {
             return doReject(reject, error: e)
         }
@@ -153,18 +157,23 @@ public class MapControlModule: RCTEventEmitter {
 
     @objc public func showUserPosition(
         _ show: Bool,
-        resolver resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        resolver resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.showUserPosition = show
-        return resolve(nil)
+        // The crash reported in SPEX-2633: this ran on React Native's queue on the first map open.
+        onMainThread {
+            MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.showUserPosition = show
+            resolve(nil)
+        }
     }
 
     @objc public func isUserPositionShown(
-        _ resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        _ resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        return resolve(MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.showUserPosition)
+        onMainThread {
+            resolve(MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.showUserPosition)
+        }
     }
 
     @objc public func goTo(
@@ -174,7 +183,7 @@ public class MapControlModule: RCTEventEmitter {
         resolver resolve: @escaping RCTPromiseResolveBlock,
         rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        var entity: MPEntity? = nil
+        let entity: MPEntity
         do {
             switch entityType {
             case "MPLocation":
@@ -188,39 +197,44 @@ public class MapControlModule: RCTEventEmitter {
             default:
                 return doReject(reject, message: "goTo: Unknown entity type \(entityType)")
             }
-
-            DispatchQueue.main.async {
-                if maxZoom != -999 {
-                    MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.goTo(entity: entity!, maxZoom: maxZoom!.doubleValue)
-                } else {
-                    MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.goTo(entity: entity!)
-                }
-                return resolve(nil)
-            }
         } catch let e {
             return doReject(reject, error: e)
+        }
+
+        onMainThread {
+            guard let mapControl = self.requireMapControl(reject) else { return }
+            if let maxZoom, maxZoom != -999 {
+                mapControl.goTo(entity: entity, maxZoom: maxZoom.doubleValue)
+            } else {
+                mapControl.goTo(entity: entity)
+            }
+            resolve(nil)
         }
     }
 
     @objc public func getCurrentVenue(
-        _ resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        _ resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        if let currentVenue = MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.currentVenue {
-            return resolve(toJSON(MPVenueCodable(withVenue: currentVenue)))
-        } else {
-            return resolve(nil)
+        onMainThread {
+            if let currentVenue = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.currentVenue {
+                resolve(toJSON(MPVenueCodable(withVenue: currentVenue)))
+            } else {
+                resolve(nil)
+            }
         }
     }
 
     @objc public func getCurrentBuilding(
-        _ resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        _ resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        if let currentBuilding = MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.currentBuilding {
-            return resolve(toJSON(MPBuildingCodable(withBuilding: currentBuilding)))
-        } else {
-            return resolve(nil)
+        onMainThread {
+            if let currentBuilding = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.currentBuilding {
+                resolve(toJSON(MPBuildingCodable(withBuilding: currentBuilding)))
+            } else {
+                resolve(nil)
+            }
         }
     }
 
@@ -234,9 +248,10 @@ public class MapControlModule: RCTEventEmitter {
             let behavior = MPSelectionBehavior()
             behavior.moveCamera = moveCamera
 
-            DispatchQueue.main.async {
-                MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.select(venue: venue, behavior: behavior)
-                return resolve(nil)
+            onMainThread {
+                guard let mapControl = self.requireMapControl(reject) else { return }
+                mapControl.select(venue: venue, behavior: behavior)
+                resolve(nil)
             }
         } catch let e {
             return doReject(reject, error: e)
@@ -253,9 +268,10 @@ public class MapControlModule: RCTEventEmitter {
             let behavior = MPSelectionBehavior()
             behavior.moveCamera = moveCamera
 
-            DispatchQueue.main.async {
-                MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.select(building: building, behavior: behavior)
-                return resolve(nil)
+            onMainThread {
+                guard let mapControl = self.requireMapControl(reject) else { return }
+                mapControl.select(building: building, behavior: behavior)
+                resolve(nil)
             }
         } catch let e {
             return doReject(reject, error: e)
@@ -275,12 +291,13 @@ public class MapControlModule: RCTEventEmitter {
                 behavior.maxZoom = Double.nan
             }
 
-            Task {
-                let loc = MPMapsIndoors.shared.locationWith(locationId: location.locationId)
-                DispatchQueue.main.async {
-                    MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.select(location: loc, behavior: behavior)
-                    return resolve(nil)
-                }
+            // Looked up here rather than in a detached Task, so the selection keeps its place in the
+            // order of calls (a Task could let a later call reach the map first).
+            let loc = MPMapsIndoors.shared.locationWith(locationId: location.locationId)
+            onMainThread {
+                guard let mapControl = self.requireMapControl(reject) else { return }
+                mapControl.select(location: loc, behavior: behavior)
+                resolve(nil)
             }
         } catch let e {
             return doReject(reject, error: e)
@@ -297,9 +314,10 @@ public class MapControlModule: RCTEventEmitter {
             let location = MPMapsIndoors.shared.locationWith(locationId: locationId)
             let behavior: MPSelectionBehavior = try fromJSON(behaviorJSON)
 
-            DispatchQueue.main.async {
-                MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.select(location: location, behavior: behavior)
-                return resolve(nil)
+            onMainThread {
+                guard let mapControl = self.requireMapControl(reject) else { return }
+                mapControl.select(location: location, behavior: behavior)
+                resolve(nil)
             }
         } catch let e {
             return doReject(reject, error: e)
@@ -320,128 +338,149 @@ public class MapControlModule: RCTEventEmitter {
     }
 
     @objc public func getMapViewPaddingStart(
-        _ resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        _ resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        guard let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() else {
-            return doReject(reject, message: "mapcontrol not available")
-        }
-        return resolve(mapControl.mapPadding.left)
+        resolveMapPadding(resolve, reject) { $0.left }
     }
     @objc public func getMapViewPaddingEnd(
-        _ resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        _ resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        guard let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() else {
-            return doReject(reject, message: "mapcontrol not available")
-        }
-        return resolve(mapControl.mapPadding.right)
+        resolveMapPadding(resolve, reject) { $0.right }
     }
     @objc public func getMapViewPaddingTop(
-        _ resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        _ resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        guard let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() else {
-            return doReject(reject, message: "mapcontrol not available")
-        }
-        return resolve(mapControl.mapPadding.top)
+        resolveMapPadding(resolve, reject) { $0.top }
     }
     @objc public func getMapViewPaddingBottom(
-        _ resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        _ resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        guard let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() else {
-            return doReject(reject, message: "mapcontrol not available")
+        resolveMapPadding(resolve, reject) { $0.bottom }
+    }
+
+    /// Resolves with one edge of the map control's padding, read on the main thread.
+    private func resolveMapPadding(
+        _ resolve: @escaping RCTPromiseResolveBlock,
+        _ reject: @escaping RCTPromiseRejectBlock,
+        function: String = #function,
+        edge: @escaping (UIEdgeInsets) -> CGFloat
+    ) {
+        onMainThread {
+            guard let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() else {
+                return doReject(reject, message: "mapcontrol not available", _func: function)
+            }
+            resolve(edge(mapControl.mapPadding))
         }
-        return resolve(mapControl.mapPadding.bottom)
     }
 
     @objc public func setMapStyle(
         _ mapStyleJSON: String,
-        resolver resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        resolver resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
         do {
             let mapStyle: MPMapStyleCodable = try fromJSON(mapStyleJSON)
-            MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.mapStyle = mapStyle
-            return resolve(nil)
+            onMainThread {
+                guard let mapControl = self.requireMapControl(reject) else { return }
+                mapControl.mapStyle = mapStyle
+                resolve(nil)
+            }
         } catch let e {
             return doReject(reject, error: e)
         }
     }
 
     @objc public func getMapStyle(
-        _ resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        _ resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        guard let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() else {
-            return doReject(reject, message: "mapControl not available")
-        }
+        onMainThread {
+            guard let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() else {
+                return doReject(reject, message: "mapControl not available")
+            }
 
-        let mapStyle: MPMapStyle? = mapControl.mapStyle
-        return resolve(mapStyle.map { toJSON(MPMapStyleCodable(withMapStyle: $0)) })
+            let mapStyle: MPMapStyle? = mapControl.mapStyle
+            resolve(mapStyle.map { toJSON(MPMapStyleCodable(withMapStyle: $0)) })
+        }
     }
 
     @objc public func showInfoWindowOnClickedLocation(
         _ show: Bool,
-        resolver resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        resolver resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.showInfoWindowOnClickedLocation = show
-        return resolve(nil)
+        onMainThread {
+            guard let mapControl = self.requireMapControl(reject) else { return }
+            mapControl.showInfoWindowOnClickedLocation = show
+            resolve(nil)
+        }
     }
 
     @objc public func deSelectLocation(
         _ resolve: @escaping RCTPromiseResolveBlock,
         rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        DispatchQueue.main.async {
-            MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.select(location: nil, behavior: .default)
-            return resolve(nil)
+        onMainThread {
+            guard let mapControl = self.requireMapControl(reject) else { return }
+            mapControl.select(location: nil, behavior: .default)
+            resolve(nil)
         }
     }
 
     @objc public func getCurrentBuildingFloor(
-        _ resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        _ resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        guard let curFloor = MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.currentBuilding?.currentFloor else {
-            return resolve(nil)
-        }
+        onMainThread {
+            guard let curFloor = MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.currentBuilding?.currentFloor else {
+                return resolve(nil)
+            }
 
-        return resolve(toJSON(curFloor.stringValue))
+            resolve(toJSON(curFloor.stringValue))
+        }
     }
 
     @objc public func getCurrentFloorIndex(
-        _ resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        _ resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        return resolve(MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.currentFloorIndex)
+        onMainThread {
+            resolve(MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.currentFloorIndex)
+        }
     }
 
     @objc public func getCurrentMapsIndoorsZoom(
-        _ resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        _ resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        return resolve(MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.cameraPosition.zoom)
+        onMainThread {
+            resolve(MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.cameraPosition.zoom)
+        }
     }
 
     @objc public func selectFloor(
         _ floorIndex: Int,
         resolver resolve: @escaping RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        DispatchQueue.main.async {
-            MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.select(floorIndex: floorIndex)
-            return resolve(nil)
+        onMainThread {
+            guard let mapControl = self.requireMapControl(reject) else { return }
+            mapControl.select(floorIndex: floorIndex)
+            resolve(nil)
         }
     }
 
     @objc public func isFloorSelectorHidden(
-        _ resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        _ resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        return resolve(MapsIndoorsData.sharedInstance.mapView?.getMapControl()!.hideFloorSelector)
+        onMainThread {
+            resolve(MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.hideFloorSelector)
+        }
     }
 
     @objc public func hideFloorSelector(
@@ -501,88 +540,122 @@ public class MapControlModule: RCTEventEmitter {
 
     @objc public func getCurrentCameraPosition(
         _ resolve: @escaping RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        DispatchQueue.main.async {
-            return resolve(toJSON(MPCameraPositionCodable(withCameraPosition: MapsIndoorsData.sharedInstance.mapView!.getMapControl()!.cameraPosition)))
+        onMainThread {
+            guard let mapControl = self.requireMapControl(reject) else { return }
+            resolve(toJSON(MPCameraPositionCodable(withCameraPosition: mapControl.cameraPosition)))
         }
+    }
+
+    /// The map control, or nil after rejecting the promise when there is none yet. Main-actor only, like
+    /// every other use of the map control.
+    @MainActor private func requireMapControl(
+        _ reject: @escaping RCTPromiseRejectBlock,
+        function: String = #function
+    ) -> MPMapControl? {
+        guard let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() else {
+            doReject(reject, message: "mapControl not available", _func: function)
+            return nil
+        }
+        return mapControl
     }
 
     @objc public func enableLiveData(
         _ domainType: String,
         hasListener: Bool,
-        resolver resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        resolver resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        let mapsIndoorsData = MapsIndoorsData.sharedInstance
-        guard let mapControl = mapsIndoorsData.mapView?.getMapControl() else {
-            return doReject(reject, message: "mapControl not available")
+        onMainThread {
+            let mapsIndoorsData = MapsIndoorsData.sharedInstance
+            guard let mapControl = mapsIndoorsData.mapView?.getMapControl() else {
+                return doReject(reject, message: "mapControl not available")
+            }
+
+            mapControl.enableLiveData(domain: domainType, listener: hasListener ? mapsIndoorsData.mapControlListenerDelegate?.onLiveDataReceived : nil)
+            resolve(nil)
         }
-
-        mapControl.enableLiveData(domain: domainType, listener: hasListener ? mapsIndoorsData.mapControlListenerDelegate?.onLiveDataReceived : nil)
-
-        return resolve(nil)
     }
 
     @objc public func disableLiveData(
         _ domainType: String,
-        resolver resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        resolver resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.disableLiveData(domain: domainType)
-        return resolve(nil)
+        onMainThread {
+            MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.disableLiveData(domain: domainType)
+            resolve(nil)
+        }
     }
 
     // Listeners
 
-    @objc public func setOnMapClickListener(_ setup: Bool, consumeEvent: Bool, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.respondToTap = setup
-        MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.consumeTap = consumeEvent
-
-        return resolve(nil)
+    @objc public func setOnMapClickListener(_ setup: Bool, consumeEvent: Bool, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        // On the main thread, where MapControlDelegate reads these flags.
+        onMainThread {
+            MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.respondToTap = setup
+            MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.consumeTap = consumeEvent
+            resolve(nil)
+        }
     }
 
-    @objc public func setOnLocationSelectedListener(_ setup: Bool, consumeEvent: Bool, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.respondToDidChangeLocation = setup
-        MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.consumeChangeLocation = consumeEvent
-
-        return resolve(nil)
+    @objc public func setOnLocationSelectedListener(_ setup: Bool, consumeEvent: Bool, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        // On the main thread, where MapControlDelegate reads these flags.
+        onMainThread {
+            MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.respondToDidChangeLocation = setup
+            MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.consumeChangeLocation = consumeEvent
+            resolve(nil)
+        }
     }
 
-    @objc public func setOnCurrentVenueChangedListener(_ setup: Bool, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.respondToDidChangeVenue = setup
-
-        return resolve(nil)
+    @objc public func setOnCurrentVenueChangedListener(_ setup: Bool, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        // On the main thread, where MapControlDelegate reads these flags.
+        onMainThread {
+            MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.respondToDidChangeVenue = setup
+            resolve(nil)
+        }
     }
 
-    @objc public func setOnCurrentBuildingChangedListener(_ setup: Bool, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.respondToDidChangeBuilding = setup
-
-        return resolve(nil)
+    @objc public func setOnCurrentBuildingChangedListener(_ setup: Bool, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        // On the main thread, where MapControlDelegate reads these flags.
+        onMainThread {
+            MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.respondToDidChangeBuilding = setup
+            resolve(nil)
+        }
     }
 
-    @objc public func setOnMarkerClickListener(_ setup: Bool, consumeEvent: Bool, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.respondToTapIcon = setup
-        MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.consumeTapIcon = consumeEvent
-
-        return resolve(nil)
+    @objc public func setOnMarkerClickListener(_ setup: Bool, consumeEvent: Bool, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        // On the main thread, where MapControlDelegate reads these flags.
+        onMainThread {
+            MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.respondToTapIcon = setup
+            MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.consumeTapIcon = consumeEvent
+            resolve(nil)
+        }
     }
 
-    @objc public func setOnMarkerInfoWindowClickListener(_ setup: Bool, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.respondToDidTapInfoWindow = setup
-
-        return resolve(nil)
+    @objc public func setOnMarkerInfoWindowClickListener(_ setup: Bool, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        // On the main thread, where MapControlDelegate reads these flags.
+        onMainThread {
+            MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.respondToDidTapInfoWindow = setup
+            resolve(nil)
+        }
     }
 
-    @objc public func setOnFloorUpdateListener(_ setup: Bool, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.respondToDidChangeFloorIndex = setup
-
-        return resolve(nil)
+    @objc public func setOnFloorUpdateListener(_ setup: Bool, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        // On the main thread, where MapControlDelegate reads these flags.
+        onMainThread {
+            MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.respondToDidChangeFloorIndex = setup
+            resolve(nil)
+        }
     }
 
-    @objc public func setMPCameraEventListener(_ setup: Bool, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.respondToCameraEvents = setup
-        return resolve(nil)
+    @objc public func setMPCameraEventListener(_ setup: Bool, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        // On the main thread, where MapControlDelegate reads these flags.
+        onMainThread {
+            MapsIndoorsData.sharedInstance.mapControlListenerDelegate?.respondToCameraEvents = setup
+            resolve(nil)
+        }
     }
 
     // Floor selector
@@ -590,16 +663,16 @@ public class MapControlModule: RCTEventEmitter {
     @objc public func setFloorSelector(
         _ setup: Bool,
         isAutoFloorChangeEnabled: Bool,
-        resolver resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        resolver resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        let mapsIndoorsData = MapsIndoorsData.sharedInstance
+        onMainThread {
+            let mapsIndoorsData = MapsIndoorsData.sharedInstance
 
-        guard let mapControl = mapsIndoorsData.mapView?.getMapControl() else {
-            return doReject(reject, message: "mapControl is not available")
-        }
+            guard let mapControl = mapsIndoorsData.mapView?.getMapControl() else {
+                return doReject(reject, message: "mapControl is not available")
+            }
 
-        DispatchQueue.main.async {
             if setup {
                 let delegate = mapsIndoorsData.mapControlListenerDelegate!
                 mapControl.delegate = delegate
@@ -613,9 +686,9 @@ public class MapControlModule: RCTEventEmitter {
                 mapControl.floorSelector = nil
                 mapsIndoorsData.floorSelector = nil
             }
-        }
 
-        return resolve(nil)
+            resolve(nil)
+        }
     }
 
     @objc public func onFloorSelectionChanged(
@@ -623,16 +696,21 @@ public class MapControlModule: RCTEventEmitter {
         resolver resolve: @escaping RCTPromiseResolveBlock,
         rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        guard let floorSelector = MapsIndoorsData.sharedInstance.floorSelector else {
-            return doReject(reject, message: "Floor selector not available")
-        }
-
+        let floor: MPFloorCodable
         do {
-            let floor: MPFloorCodable = try fromJSON(newFloorJson)
-            floorSelector.onFloorSelectionChanged(newFloor: floor.floorIndex ?? 0)
-            return resolve(nil)
+            floor = try fromJSON(newFloorJson)
         } catch let e {
             return doReject(reject, error: e)
+        }
+
+        // `floorSelector` is assigned on the main thread by setFloorSelector.
+        onMainThread {
+            guard let floorSelector = MapsIndoorsData.sharedInstance.floorSelector else {
+                return doReject(reject, message: "Floor selector not available")
+            }
+
+            floorSelector.onFloorSelectionChanged(newFloor: floor.floorIndex ?? 0)
+            resolve(nil)
         }
     }
 
@@ -643,34 +721,32 @@ public class MapControlModule: RCTEventEmitter {
         resolver resolve: @escaping RCTPromiseResolveBlock,
         rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        let mapsIndoorsData = MapsIndoorsData.sharedInstance
-        guard let mapControl = mapsIndoorsData.mapView?.getMapControl() else {
-            return doReject(reject, message: "mapControl is not available")
-        }
-
         let haloWidth: Float = showHalo ? 1.0 : 0.0
         let haloBlur: Float = showHalo ? 1.0 : 0.0
         let haloColor = UIColor.white
 
+        let textColor: UIColor?
         do {
-            if textSize != -1 && color != nil {
-                let textColor = try colorFromHexString(hex: color!)
-                mapControl.setMapLabelFont(font: UIFont.systemFont(ofSize: CGFloat(truncating: textSize!)), textSize: Float(truncating: textSize!), color: textColor, labelHaloColor: haloColor, labelHaloWidth: haloWidth, labelHaloBlur: haloBlur)
-                return resolve(nil)
-            }
-            if color != nil {
-                let textColor = try colorFromHexString(hex: color!)
-                mapControl.setMapLabelFont(color: textColor, labelHaloColor: haloColor, labelHaloWidth: haloWidth, labelHaloBlur: haloBlur)
-                return resolve(nil)
-            }
-            if textSize != -1 {
-                mapControl.setMapLabelFont(font: UIFont.systemFont(ofSize: CGFloat(truncating: textSize!)), textSize: Float(truncating: textSize!), labelHaloColor: haloColor, labelHaloWidth: haloWidth, labelHaloBlur: haloBlur)
-                return resolve(nil)
-            }
-            mapControl.setMapLabelFont(labelHaloColor: haloColor, labelHaloWidth: haloWidth, labelHaloBlur: haloBlur)
-            return resolve(nil)
+            textColor = try color.map { try colorFromHexString(hex: $0) }
         } catch {
             return doReject(reject, error: error)
+        }
+
+        onMainThread {
+            guard let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() else {
+                return doReject(reject, message: "mapControl is not available")
+            }
+
+            if textSize != -1, let textColor {
+                mapControl.setMapLabelFont(font: UIFont.systemFont(ofSize: CGFloat(truncating: textSize!)), textSize: Float(truncating: textSize!), color: textColor, labelHaloColor: haloColor, labelHaloWidth: haloWidth, labelHaloBlur: haloBlur)
+            } else if let textColor {
+                mapControl.setMapLabelFont(color: textColor, labelHaloColor: haloColor, labelHaloWidth: haloWidth, labelHaloBlur: haloBlur)
+            } else if textSize != -1 {
+                mapControl.setMapLabelFont(font: UIFont.systemFont(ofSize: CGFloat(truncating: textSize!)), textSize: Float(truncating: textSize!), labelHaloColor: haloColor, labelHaloWidth: haloWidth, labelHaloBlur: haloBlur)
+            } else {
+                mapControl.setMapLabelFont(labelHaloColor: haloColor, labelHaloWidth: haloWidth, labelHaloBlur: haloBlur)
+            }
+            resolve(nil)
         }
     }
 
@@ -679,24 +755,27 @@ public class MapControlModule: RCTEventEmitter {
         resolver resolve: @escaping RCTPromiseResolveBlock,
         rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        let mapsIndoorsData = MapsIndoorsData.sharedInstance
-        guard let mapControl = mapsIndoorsData.mapView?.getMapControl() else {
-            return doReject(reject, message: "mapControl is not available")
-        }
+        onMainThread {
+            guard let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() else {
+                return doReject(reject, message: "mapControl is not available")
+            }
 
-        mapControl.buildingSelectionMode = MPSelectionMode(rawValue: selectionMode.intValue) ?? .automatic
-        return resolve(nil)
+            mapControl.buildingSelectionMode = MPSelectionMode(rawValue: selectionMode.intValue) ?? .automatic
+            resolve(nil)
+        }
     }
 
     @objc public func getBuildingSelectionMode(
-        _ resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        _ resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        guard let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() else {
-            return doReject(reject, message: "mapControl is not available")
-        }
+        onMainThread {
+            guard let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() else {
+                return doReject(reject, message: "mapControl is not available")
+            }
 
-        return resolve(mapControl.buildingSelectionMode.rawValue)
+            resolve(mapControl.buildingSelectionMode.rawValue)
+        }
     }
 
     @objc public func setFloorSelectionMode(
@@ -704,24 +783,27 @@ public class MapControlModule: RCTEventEmitter {
         resolver resolve: @escaping RCTPromiseResolveBlock,
         rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        let mapsIndoorsData = MapsIndoorsData.sharedInstance
-        guard let mapControl = mapsIndoorsData.mapView?.getMapControl() else {
-            return doReject(reject, message: "mapControl is not available")
-        }
+        onMainThread {
+            guard let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() else {
+                return doReject(reject, message: "mapControl is not available")
+            }
 
-        mapControl.floorSelectionMode = MPSelectionMode(rawValue: selectionMode.intValue) ?? .automatic
-        return resolve(nil)
+            mapControl.floorSelectionMode = MPSelectionMode(rawValue: selectionMode.intValue) ?? .automatic
+            resolve(nil)
+        }
     }
 
     @objc public func getFloorSelectionMode(
-        _ resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        _ resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        guard let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() else {
-            return doReject(reject, message: "mapControl is not available")
-        }
+        onMainThread {
+            guard let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() else {
+                return doReject(reject, message: "mapControl is not available")
+            }
 
-        return resolve(mapControl.floorSelectionMode.rawValue)
+            resolve(mapControl.floorSelectionMode.rawValue)
+        }
     }
 
     @objc public func setHiddenFeatures(
@@ -729,11 +811,6 @@ public class MapControlModule: RCTEventEmitter {
         resolver resolve: @escaping RCTPromiseResolveBlock,
         rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        let mapsIndoorsData = MapsIndoorsData.sharedInstance
-        guard let mapControl = mapsIndoorsData.mapView?.getMapControl() else {
-            return doReject(reject, message: "mapControl is not available")
-        }
-
         guard let features = try? JSONDecoder().decode([Int].self, from: features.data(using: .utf8)!) else {
             return doReject(reject, message: "Features could not be parsed")
         }
@@ -746,25 +823,30 @@ public class MapControlModule: RCTEventEmitter {
             featureTypes.append(featureType)
         }
 
-        mapControl.hiddenFeatures = featureTypes.map({ $0.rawValue })
+        onMainThread {
+            guard let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() else {
+                return doReject(reject, message: "mapControl is not available")
+            }
 
-        return resolve(nil)
+            mapControl.hiddenFeatures = featureTypes.map({ $0.rawValue })
+            resolve(nil)
+        }
     }
 
     @objc public func getHiddenFeatures(
-        _ resolve: RCTPromiseResolveBlock,
-        rejecter reject: RCTPromiseRejectBlock
+        _ resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        guard let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() else {
-            return doReject(reject, message: "mapControl is not available")
+        onMainThread {
+            guard let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() else {
+                return doReject(reject, message: "mapControl is not available")
+            }
+
+            guard let hiddenFeatures = try? JSONEncoder().encode(mapControl.hiddenFeatures) else {
+                return doReject(reject, message: "something went wrong encoding hiddenfeatures")
+            }
+
+            resolve(String(data: hiddenFeatures, encoding: String.Encoding.utf8))
         }
-
-        var features = [String]()
-
-        guard let hiddenFeatures = try? JSONEncoder().encode(mapControl.hiddenFeatures) else {
-            return doReject(reject, message: "something went wrong encoding hiddenfeatures")
-        }
-
-        return resolve(String(data: hiddenFeatures, encoding: String.Encoding.utf8))
     }
 }
