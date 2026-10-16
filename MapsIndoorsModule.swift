@@ -148,19 +148,22 @@ public class MapsIndoorsModule: RCTEventEmitter {
         return resolve(toJSON(locations))
     }
 
-    @objc public func getMapStyles(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-        guard let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() else {
-            return doReject(reject, message: "getMapStyles: Must create MapControl first")
-        }
-        guard let venue = mapControl.currentVenue else {
-            return doReject(reject, message: "getMapStyles: No current venue")
-        }
-        guard let styles = venue.styles else {
-            return doReject(reject, message: "getMapStyles: Got no styles")
-        }
+    @objc public func getMapStyles(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        // `currentVenue` is read from the map control, which has to happen on the main thread.
+        onMainThread {
+            guard let mapControl = MapsIndoorsData.sharedInstance.mapView?.getMapControl() else {
+                return doReject(reject, message: "getMapStyles: Must create MapControl first")
+            }
+            guard let venue = mapControl.currentVenue else {
+                return doReject(reject, message: "getMapStyles: No current venue")
+            }
+            guard let styles = venue.styles else {
+                return doReject(reject, message: "getMapStyles: Got no styles")
+            }
 
-        let mapStyles = styles.map({ MPMapStyleCodable(withMapStyle: $0) })
-        return resolve(toJSON(mapStyles))
+            let mapStyles = styles.map({ MPMapStyleCodable(withMapStyle: $0) })
+            resolve(toJSON(mapStyles))
+        }
     }
 
     @objc public func getSolution(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
