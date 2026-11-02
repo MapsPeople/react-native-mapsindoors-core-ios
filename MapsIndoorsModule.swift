@@ -35,8 +35,22 @@ public class MapsIndoorsModule: RCTEventEmitter {
     /// Keeps the `cacheData` delegate alive while a dataset sync runs - see the note in `cacheData`.
     private var datasetDelegate: DatasetDelegate?
 
-    @objc(loadMapsIndoors:optionalStrings:resolver:rejecter:)
-    func loadMapsIndoors(apiKey: String, optionalStrings: [String]?, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+    /// Names this wrapper as the component behind the MapsIndoors Insights session, so React Native
+    /// apps are told apart from native ones in the rollups.
+    ///
+    /// The SDK stamps the component into the session when the session starts, inside `load`, so this
+    /// has to run on the same call, right before it. The version comes from JS, which reads it from
+    /// the map package's own package.json.
+    private func setReactNativeComponent(_ sdkVersion: String?) {
+        MPLogger.sharedInstance.component = "React Native/iOS SDK"
+        MPLogger.sharedInstance.componentVersion = sdkVersion ?? "unknown"
+    }
+
+    @objc(loadMapsIndoors:optionalStrings:sdkVersion:resolver:rejecter:)
+    func loadMapsIndoors(apiKey: String, optionalStrings: [String]?, sdkVersion: String?, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        setReactNativeComponent(sdkVersion)
+        keptRoutes.removeAll()
+
         Task {
             do {
                 if optionalStrings != nil {
@@ -211,6 +225,7 @@ public class MapsIndoorsModule: RCTEventEmitter {
 
         positionProvider = provider
         MPMapsIndoors.shared.positionProvider = positionProvider
+        setOnMapControl(provider)
 
         return resolve(nil)
     }
@@ -218,8 +233,23 @@ public class MapsIndoorsModule: RCTEventEmitter {
     @objc public func removePositionProvider(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         positionProvider = nil
         MPMapsIndoors.shared.positionProvider = nil
+        setOnMapControl(nil)
 
         return resolve(nil)
+    }
+
+    /// Hands the provider to this wrapper's map control directly, not only through the SDK.
+    ///
+    /// The SDK passes `MPMapsIndoors.shared.positionProvider` on only to the map controls it has
+    /// registered, and every `load` clears that registry. The wrapper keeps its existing map control
+    /// across a reload (`initMapControl` returns early), so after a second `load` the control is no
+    /// longer registered, the provider's delegate is never set, and the blue dot never shows
+    /// (MS-3929). Setting it here wires the delegate whatever the SDK's registry holds; for a
+    /// registered control it is the same assignment the SDK makes.
+    private func setOnMapControl(_ provider: MPPositionProvider?) {
+        onMainThread {
+            MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.positionProvider = provider
+        }
     }
 
     @objc public func onPositionUpdate(_ positionJSON: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
@@ -290,6 +320,7 @@ public class MapsIndoorsModule: RCTEventEmitter {
     }
 
     @objc public func destroy(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        keptRoutes.removeAll()
         Task {
             MPMapsIndoors.shared.shutdown()
             MapsIndoorsData.sharedInstance.isInitialized = false

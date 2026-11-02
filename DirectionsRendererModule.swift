@@ -401,9 +401,12 @@ public class DirectionsRendererModule: RCTEventEmitter {
         }
     }
 
-    @objc public func setRoute(_ routeString: String, stopIcons: String, legIndex: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        // Decoded here, off the main thread: a route can be large, and none of this touches the map.
-        guard let route = try? JSONDecoder().decode(MPRouteInternal.self, from: Data(routeString.utf8)) else {
+    @objc public func setRoute(_ routeString: String, stopIcons: String, legIndex: NSNumber, routeId: String?, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        // The route `getRoute` kept, when JavaScript names one: only that instance carries the endpoints
+        // the directions Insights events report. Otherwise decoded here, off the main thread: a route can
+        // be large, and none of this touches the map.
+        guard let route = routeId.flatMap(keptRoutes.route(for:))
+                ?? (try? JSONDecoder().decode(MPRouteInternal.self, from: Data(routeString.utf8))) else {
             return doReject(reject, message: "Route could not be parsed")
         }
 

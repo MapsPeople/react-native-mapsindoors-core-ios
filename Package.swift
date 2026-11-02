@@ -19,5 +19,14 @@ let package = Package(
             dependencies: ["MainThread"],
             path: "Tests/MainThreadTests"
         ),
+        .target(
+            name: "RouteStore",
+            path: "Sources/RouteStore"
+        ),
+        .testTarget(
+            name: "RouteStoreTests",
+            dependencies: ["RouteStore"],
+            path: "Tests/RouteStoreTests"
+        ),
     ]
 )

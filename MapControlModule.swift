@@ -172,7 +172,8 @@ public class MapControlModule: RCTEventEmitter {
         rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
         onMainThread {
-            resolve(MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.showUserPosition)
+            guard let mapControl = self.requireMapControl(reject) else { return }
+            resolve(mapControl.showUserPosition)
         }
     }
 
@@ -449,7 +450,8 @@ public class MapControlModule: RCTEventEmitter {
         rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
         onMainThread {
-            resolve(MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.currentFloorIndex)
+            guard let mapControl = self.requireMapControl(reject) else { return }
+            resolve(mapControl.currentFloorIndex)
         }
     }
 
@@ -458,7 +460,8 @@ public class MapControlModule: RCTEventEmitter {
         rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
         onMainThread {
-            resolve(MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.cameraPosition.zoom)
+            guard let mapControl = self.requireMapControl(reject) else { return }
+            resolve(mapControl.cameraPosition.zoom)
         }
     }
 
@@ -479,7 +482,8 @@ public class MapControlModule: RCTEventEmitter {
         rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
         onMainThread {
-            resolve(MapsIndoorsData.sharedInstance.mapView?.getMapControl()?.hideFloorSelector)
+            guard let mapControl = self.requireMapControl(reject) else { return }
+            resolve(mapControl.hideFloorSelector)
         }
     }
 
