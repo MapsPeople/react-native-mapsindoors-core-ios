@@ -5,6 +5,7 @@
 
     RCT_EXTERN_METHOD(loadMapsIndoors:(NSString *)apiKey
                   optionalStrings:(NSArray<NSString *> _Nullable)optionalStrings
+                  sdkVersion:(NSString * _Nullable)sdkVersion
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 

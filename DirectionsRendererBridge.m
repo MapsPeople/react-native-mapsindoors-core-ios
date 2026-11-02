@@ -40,6 +40,7 @@
     RCT_EXTERN_METHOD(setRoute: (NSString *) routeString
       stopIcons:(NSString *) stopIcons
       legIndex: (nonnull NSNumber *) legIndex
+      routeId:(NSString *) routeId
       resolver:(RCTPromiseResolveBlock) resolve
       rejecter:(RCTPromiseRejectBlock) reject)
 

@@ -9,6 +9,10 @@ import MapsIndoors
 import MapsIndoorsCodable
 import MapsIndoorsCore
 
+/// The routes ``DirectionsServiceModule/getRoute`` returned, for ``DirectionsRendererModule/setRoute`` to
+/// render as they are. Shared by the two modules, since neither can reach the other's instance.
+let keptRoutes = RouteStore<MPRouteInternal>(capacity: 10)
+
 @objc(DirectionsService)
 public class DirectionsServiceModule: NSObject {
     var directionsVariables = [String: DirectionsVariables]()
@@ -110,11 +114,13 @@ public class DirectionsServiceModule: NSObject {
             Task {
                 do {
                     if let route = try await MPMapsIndoors.shared.directionsService.routingWith(query: query) {
-                        if let routeData = try? JSONEncoder().encode(route as? MPRouteInternal) {
+                        let internalRoute = route as? MPRouteInternal
+                        if let routeData = try? JSONEncoder().encode(internalRoute) {
                             let routeRoute = String(data: routeData, encoding: String.Encoding.utf8)
                             var map = [String: String]()
                             map["route"] = routeRoute
                             map["error"] = "null"
+                            map["routeId"] = internalRoute.map(keptRoutes.keep)
                             return resolve(map)
                         } else {
                             return doReject(reject, message: "Route could not be parsed")
