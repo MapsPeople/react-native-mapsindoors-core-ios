@@ -1454,6 +1454,24 @@ public class MPDisplayRuleModule: NSObject {
         return resolve(nil)
     }
 
+    @objc public func getIconZoomFactor(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+
+        return resolve(displayRule.iconZoomFactor)
+    }
+
+    @objc public func setIconZoomFactor(_ displayRuleId: String, value: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+        guard let displayRule = getRule(name: displayRuleId) else {
+            return doReject(reject, displayRuleId: displayRuleId)
+        }
+
+        displayRule.iconZoomFactor = value.doubleValue
+
+        return resolve(nil)
+    }
+
     @objc public func getBadgeScale(_ displayRuleId: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
         guard let displayRule = getRule(name: displayRuleId) else {
             return doReject(reject, displayRuleId: displayRuleId)

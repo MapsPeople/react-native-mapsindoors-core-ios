@@ -2,6 +2,9 @@ import Foundation
 import MapsIndoors
 import MapsIndoorsCodable
 import MapsIndoorsCore
+#if canImport(MapsIndoorsMapbox)
+    import MapsIndoorsMapbox
+#endif
 import React
 
 @objc(MapsIndoorsModule)
@@ -474,6 +477,15 @@ public class MapsIndoorsModule: RCTEventEmitter {
         }
 
         Task {
+            // The SDK otherwise registers its base-map cache only when MapControl.create builds the
+            // map provider, so caching before the first map rejected with 9000 (SPEX-2895). A no-op
+            // once a map has registered its own. The SDK declares it @MainActor, since the Mapbox
+            // objects it creates belong to their creating thread; the await hops there. The token
+            // comes from Info.plist's MBXAccessToken, which Mapbox reads by itself.
+            #if canImport(MapsIndoorsMapbox)
+                await MPMapsIndoors.registerMapboxBaseMapCache()
+            #endif
+
             do {
                 if apiKeys == nil {
                     try await datasetCacheManager.synchronizeBaseMapTiles(progress: progress)
